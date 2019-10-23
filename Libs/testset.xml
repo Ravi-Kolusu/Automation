@@ -1,0 +1,27 @@
+<opt doc_type="TC_CFG" version="2">
+    <test_set> name="TestSet">
+        <test_set_parameters>
+            <parameter name="duration" value="168H"/>
+            <parameter name="parallel" value="False"/>
+        </test_set_parameters>
+        <hooks>
+            <hook id="1">
+                <location>pretest_path</location>
+                <name>pretest_name</name>
+            </hook>
+        </hooks>
+        <tests>
+            <test name="testcase_name" run="1" type="case">
+                <identities>
+                    <identity id="testcase_name" name="tmss_id"/>
+                </identities>
+                <parameters>
+                    <param name="share_hostname" value="*"/>
+                    <param name="test_code" value="BETA_CASE_01"/>
+                    <param name="func_name" value="testcase_name"/>
+                </parameters>
+                <location>testcase_path</location>
+            </test>
+        </tests>
+    </test_set>
+</opt>

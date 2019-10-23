@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="utf-8"?>
+<testbedinfo doc_type="testbed">
+    <global_environment_info>
+        <global environment_name="env_name"/>
+    </global_environment_info>
+    <regions version="8">
+        <region id="1">
+            <environment disk_type="" protocol="TCP" rdma="false"/>
+            <available_zone id="1">
+                <environment/>
+                <roc_node id="1" name="node1_name">
+                    <detail cache_type="" components="" docker_port="" external_float_gateway="" external_float_ip=""
+                            external_float_mask="" float_ip="" internal_float_gateway="" internal_float_ip="" internal_float_mask=""
+                            ipmi_ip="" ipmi_password="" ipmi_username="" link_type="" pool_disk_num="" rack_id="" role=""
+                            service="fsa,zk,vbs,snm,cm,ccdb,djob,ebs,ebs_ctrl,cfgclient,dlm" storage_disk_type="" tools_path=""
+                            zk_esn="" zk_type=""/>
+                    <communication ipv4_address="node1_ip" ipv6_address="" max_session="1" password="pass@123" port="22"
+                                   type="rocSSH" username="root"/>
+                    <inet_panels>
+                        <internal_switch gateway="" ipv4_address="" ipv6_address="" password="" port="" username=""/>
+                        <external_switch gateway="" ipv4_address="" ipv6_address="" password="" port="" username=""/>
+                        <oam bond_name="" gateway="" ipv4_address="" ipv6_address=""/>
+                        <paxos bond_name="" gateway="" ipv4_address="" ipv6_address=""/>
+                        <external bond_mode="" bond_name="" default_gateway="" gateway="" ipv4_address="" ipv6_address="" mask="" ports=""/>
+                        <internal bond_mode="" bond_name="" default_gateway="" gateway="" ipv4_address="" ipv6_address="" mask="" ports=""/>
+                        <manager_map bond_name="" gateway="" ipv4_address="" ipv6_address=""/>
+                        <v2e bond_name="" gateway="" ipv4_address="" ipv6_address=""/>
+                    </inet_panels>
+                    <float_ip>
+                        <ha gateway="" ipv4_address="" ipv6_address="" mask=""/>
+                        <gaussdb gateway="" ipv4_address="" ipv6_address="" mask=""/>
+                        <service gateway="" ipv4_address="" ipv6_address="" mask=""/>
+                        <manager gateway="" ipv4_address="" ipv6_address="" mask=""/>
+                    </float_ip>
+                    <management>
+                        <roc_node id="1"/>
+                        <tools>
+                            <tool priority="1" type="rocCli"/>
+                            <tool priority="2" type="diagnoseCli"/>
+                            <tool priority="3" type="adminCli"/>
+                        </tools>
+                    </management>
+                </roc_node>
+                <roc_node id="2" name="node2_name">
+                    <all></all>
+                </roc_node>
+            </available_zone>
+        </region>
+    </regions>
+    <hosts>
+        <host id="1">
+            <communication debug_password="" debug_username="" ipv4_address="host_ip" ipv6_address="" password="pass@123"
+                           port="22" type="standSSH" username="root"/>
+            <detail cpuCoreNum="" dbPassword="" dbUser="" gridPassword="" gridUser="" host_role="NFS_CLIENT" oraclePassword=""
+                    oracleUser="" os="Linux" tools_path="tool_path" type="Virtual" version="linux" wwn=""/>
+        </host>
+    </hosts>
+</testbedinfo>
