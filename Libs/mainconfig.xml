@@ -1,0 +1,16 @@
+<opt doc_type="MAIN_CFG" version="1">
+    <local_base_log_path>../standard_logs</local_base_log_path>
+    <local_execution_log_path>/var/www/html/logs</local_execution_log_path>
+    <test_set_file>/testset_file_path</test_set_file>
+    <testbed_file>testbed_file_path</testbed_file>
+    <tms>
+        <ip>100.23.66.22</ip>
+    </tms>
+    <test_instance_id>124</test_instance_id>
+    <execution_parameters>
+        <param name="stop_on_error" value="0"/>
+        <param name="logging_level" value="DEBUG"/>
+        <param name="monitor_interval" value="OS"/>
+        <param name="stop_on_config_error" value="0"/>
+    </execution_parameters>
+</opt>
