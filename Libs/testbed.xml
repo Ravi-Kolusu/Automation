@@ -7,7 +7,6 @@
         <region id="1">
             <environment disk_type="" protocol="TCP" rdma="false"/>
             <available_zone id="1">
-                <environment/>
                 <roc_node id="1" name="node1_name">
                     <detail cache_type="" components="" docker_port="" external_float_gateway="" external_float_ip=""
                             external_float_mask="" float_ip="" internal_float_gateway="" internal_float_ip="" internal_float_mask=""
@@ -42,7 +41,7 @@
                     </management>
                 </roc_node>
                 <roc_node id="2" name="node2_name">
-                    <all></all>
+                    <all>some_data</all>
                 </roc_node>
             </available_zone>
         </region>
