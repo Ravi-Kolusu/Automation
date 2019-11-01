@@ -1,4 +1,3 @@
-
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
 
@@ -8,26 +7,26 @@
 
 import re
 import os
-from UniAutos.Device.Host.Unix import Unix
-from UniAutos.Util.Time import sleep
-from UniAutos.Util.Units import Units, BYTE, MEGABYTE, SECOND
-from UniAutos.Component.Lun.LunBase import LunBase
-from UniAutos.Component.Snapshot.Huawei.OceanStor.Lun import Snapshot as SnapshotBase
-from UniAutos.Component.Snapshot.Huawei.Roc.Roc import Snapshot as RocSnapShotBase
-from UniAutos.Component.Filesystem.FilesystemBase import FilesystemBase
-from UniAutos.Component.Volume.Huawei.DSware import Volume
-from UniAutos.Exception.CommandException import CommandException
-from UniAutos.Exception.FileNotFoundException import FileNotFoundException
-from UniAutos.Exception.InvalidParamException import InvalidParamException
-from UniAutos.Exception.UniAutosException import UniAutosException
-from UniAutos.Component.Upgrade.Huawei.Simulator import Simulator
-from UniAutos.Util.Fault import Fault
+from Libs.Unix import Unix
+from Libs.Time import sleep
+from Libs.Units import Units, BYTE, MEGABYTE, SECOND
+#from UniAutos.Component.Lun.LunBase import LunBase
+#from UniAutos.Component.Snapshot.Huawei.OceanStor.Lun import Snapshot as SnapshotBase
+#from UniAutos.Component.Snapshot.Huawei.Roc.Roc import Snapshot as RocSnapShotBase
+#from UniAutos.Component.Filesystem.FilesystemBase import FilesystemBase
+#from UniAutos.Component.Volume.Huawei.DSware import Volume
+from Libs.Exception.CustomExceptions import CommandException
+from Libs.Exception.CustomExceptions import FileNotFoundException
+from Libs.Exception.CustomExceptions import InvalidParamException
+from Libs.Exception.UniAutosException import UniAutosException
+#from UniAutos.Component.Upgrade.Huawei.Simulator import Simulator
+#from UniAutos.Util.Fault import Fault
 import threading
 import random
 import textwrap
 import time
 import datetime
-from UniAutos.Util.Threads import Threads
+from Libs.Threads import Threads
 
 
 class Linux(Unix):
@@ -36,39 +35,37 @@ class Linux(Unix):
     提供主机操作相关接口，如: 创建分区， 创建文件系统等.
 
     Args:
-    username (str): Linux主机登陆使用的用户名, 建议使用root用户.
-    password (str): username的登陆密码.
-    params (dict): 其他参数, 如下定义:
-    params = {"protocol": (str),
-    "port": (str),
-    "ipv4_address": (str),
-    "ipv6_address": (str),
-    "os": (str),
-    "type": (str)}
-    params键值对说明:
-    protocol (str): 通信协议，可选，取值范围:
-    ["storSSH", "standSSH", "local", "telnet", "xml-rpc"]
-    port (int): 通信端口，可选
-    ipv4_address (str): 主机的ipv4地址，key与ipv6_address必选其一
-    ipv6_address (str): 主机的ipv6地址，key与ipv4_address必选其一
-    os (str): 主机操作系统类型，可选
-    type (str): 连接的类型
+        username (str): Linux主机登陆使用的用户名, 建议使用root用户.
+        password (str): username的登陆密码.
+        params (dict): 其他参数, 如下定义:
+        params = {"protocol": (str),
+        "port": (str),
+        "ipv4_address": (str),
+        "ipv6_address": (str),
+        "os": (str),
+        "type": (str)}
+        params键值对说明:
+        protocol (str): 通信协议，可选，取值范围:
+        ["storSSH", "standSSH", "local", "telnet", "xml-rpc"]
+        port (int): 通信端口，可选
+        ipv4_address (str): 主机的ipv4地址，key与ipv6_address必选其一
+        ipv6_address (str): 主机的ipv6地址，key与ipv4_address必选其一
+        os (str): 主机操作系统类型，可选
+        type (str): 连接的类型
 
     Attributes:
-    self.os (str): 主机的操作系统类型, 指定为: 'Linux'.
-    self.openIscsi (bool): 主机是否安装openIscsi, 默认为False; False: 未安装，True: 已安装.
+        self.os (str): 主机的操作系统类型, 指定为: 'Linux'.
+        self.openIscsi (bool): 主机是否安装openIscsi, 默认为False; False: 未安装，True: 已安装.
 
     Returns:
-    Linux (instance): Linux主机对象实例.
+        Linux (instance): Linux主机对象实例.
 
     Raises:
-    None.
+        None.
 
     Examples:
-    None.
-
+        None.
     """
-
     def __init__(self, username, password, params):
         super(Linux, self).__init__(username, password, params)
         self.os = 'Linux'
@@ -84,900 +81,885 @@ class Linux(Unix):
         no_timeout = True if "Red Hat" in sys_info or "SUSE" in sys_info else False
         if no_timeout:
             self.logger.info("Set never timeout on the Red Hat operating system")
-            self.run({"command": ["sh", "-c", "sed -i \"s/#ClientAliveInterval 0/ClientAliveInterval 60/g\" sshd_config"],
-            "directory": "/etc/ssh"})
-            self.run({"command": ["sh", "-c", "sed -i \"s/#ClientAliveCountMax 3/ClientAliveCountMax 3/g\" sshd_config"],
-            "directory": "/etc/ssh"})
-            self.run({"command": ["sh", "-c", "service sshd reload"]})
-
-def rescanDisk(self):
-"""安装华为自研多路径的情况下重新扫描映射的LUN
-
-Examples:
-hostObj.rescanDisk()
-
-"""
-self.logger.info("Starting to rescan the disks with command 'hot_add' on %s" % self.getIpAddress())
-try:
-self.glock.acquire()
-for times in range(3):
-result = self.run({"command": ["sh", "-c", "hot_add"], "timeout": 1800})['stdout']
-if result:
-if result.find('ERROR') < 0:
-return
-sleep(1)
-finally:
-self.glock.release()
-
-def rescanDiskNoUltraPath(self):
-"""不安装华为自研多路径的情况下重新扫描映射的LUN
-
-Examples:
-self.host.rescanDiskNoUltraPath()
-
-"""
-self.logger.info("Starting to rescan the disks with command 'rescan-scsi-bus.sh' on %s" % self.getIpAddress())
-try:
-self.glock.acquire()
-# 当三条命令都没有报错，则退出，如果有命令报错，则循环执行三次
-for times in range(3):
-result1 = self.run({"command": ["sh", "-c", "rescan-scsi-bus.sh"]})['stdout']
-result2 = self.run({"command": ["sh", "-c", "lsscsi"]})['stdout']
-result3 = self.run({"command": ["sh", "-c", "fdisk -l"]})['stdout']
-# 如下命令为重新扫盘
-p = '\[(\d+):\d+:\d+:\d+\]\s+disk\s+HUAWEI\s+XSG1'
-rstList = list(set(re.findall(p, result2, re.S)))
-for rst in rstList:
-self.run({'command': ['sh', '-c', 'echo "- - -" > /sys/class/scsi_host/host%s/scan' % rst]})
-i = 0
-for result in (result1, result2, result3):
-if result:
-if result.find('ERROR') < 0:
-i += 1
-sleep(1)
-if i == 3:
-return
-finally:
-self.glock.release()
-
-def getDisk(self, diskLabel):
-"""获取主机指定的单个磁盘信息, 该方法仅适用于Linux
-
-Args:
-diskLabel (str): 映射的Lun在Linux上的设备名称，如: "/dev/sdb"(不是分区, 如: "/dev/sdb1").
-
-Returns:
-diskInfo (dict): 获取的磁盘信息, diskInfo键值对说明:
-size (str): 指定磁盘的总容量.
-partition (dict): 指定磁盘的分区信息, getPartitions()接口获取, 参考由getPartitions()说明.
-
-Raises:
-CommandException: 指定磁盘不存在时抛出异常.
-
-Examples:
-hostObj.getDisk("/dev/sdb")
-Output:
-{'partitions': [
-{'end': '3051MB',
-'fs': None,
-'info': 'linux',
-'label': 'msdos',
-'mounts': [],
-'partition': '/dev/sdb3',
-'size': '1024MB',
-'start': '2027MB',
-'status': None,
-'type': 'primary'},],
-'size': '10.7GB'}
-
-"""
-diskInfo = {}
-response = self.run({"command": ["sh", "-c", "fdisk", diskLabel, "-l"]})
-
-if response["rc"] != 0:
-raise CommandException("Could not find disk %s" % diskLabel)
-
-size = re.search(r"((\d+(\.\d*)?)|0\.\d+) ([GKMTP]?B)", response["stdout"])
-if size:
-size = size.group()
-hasPartition = True
-if re.search(r'doesn\'t contain a valid partition table', response["stdout"]):
-hasPartition = False
-if re.search(r'' + str(diskLabel) + '\d+', response["stdout"]) is None:
-hasPartition = False
-
-partitions = []
-if hasPartition:
-partitions = self.getPartitions(disk=diskLabel)
-diskInfo = {"size": size.replace(" ", ""),
-"partitions": partitions}
-
-return diskInfo
-
-def getDisks(self):
-"""获取当前主机的磁盘信息，包含磁盘名称和容量"""
-diskInfo = {}
-response = self.run({"command": ["sh", "-c", "fdisk", "-l"]})
-
-if response["rc"] != 0:
-raise CommandException("Could not find disks")
-
-regex = re.compile(r'^Disk\s*(/dev/\S*):\s*(\d+\.\d+\s+\w+),')
-lines = self.split(response['stdout'])
-for l in lines:
-matcher = regex.match(l)
-if matcher:
-disk = matcher.groups()[0]
-size = matcher.groups()[1]
-diskInfo.update({disk: size})
-return diskInfo
-
-def getPartitions(self, lunComponent=None, disk=None, raw=False):
-"""获取指定的Lun对象或磁盘设备的分区信息
-
-Args:
-lunComponent (instance): Lun实例对象，lunComponent和disk都未指定时获取全部分区, 可选参数, 默认为None.
-disk (str): 需要获取分区信息的磁盘设备, 可选参数, 默认为None, 如: "/dev/sdb".
-raw (bool): 是否只获取文件系统类型为raw的分区, True为只获取raw分区，False获取全部,
--可选参数，默认为False.
-
-Returns:
-retArr (dict)：指定Lun对象或磁盘设备的分区信息,reArr键值对说明:
-end (str): 分区在磁盘设备的结束位置, Linux操作系统专有.
-fs (str): 分区的文件系统类型.
-info (str): 分区系统信息, linux系统分区一般为"Linux".
-label (str): 分区标签.
-mounts (list): 分区的挂载目录, 一个分区可以挂载多个目录.
-partition (str): 分区名称.
-size (str): 分区大小.
-start (str): 分区在磁盘设备的开始位置, Linux操作系统专有.
-status (str): Linux默认为None.
-type (str): 分区类型, 如: primary, extended等.
-Raises:
-CommandException: 命令执行失败，未找到分区时抛出异常.
-
-Examples:
-hostObj.getPartitions(disk="/dev/sdb", raw=True) or hostObj.getPartitions(lun=LunObj, raw=True)
-Output:
-[{'end': '1003MB',
-'fs': 'ext2',
-'info': 'linux',
-'label': 'msdos',
-'mounts': [],
-'partition': '/dev/sdb1',
-'size': '1003MB',
-'start': '32.3kB',
-'status': None,
-'type': 'primary'},
-{'end': '4075MB',
-'fs': 'ext2',
-'info': 'linux',
-'label': 'msdos',
-'mounts': ['/mnt'],
-'partition': '/dev/sdb4',
-'size': '1024MB',
-'start': '3051MB',
-'status': None,
-'type': 'primary'}]
-
-"""
-partitions = []
-if lunComponent:
-disk = self._getDiskDevice(lunComponent)
-
-if disk:
-response = self.run({"command": ["sh", "-c", "parted", disk, "-s", "p"]})
-else:
-response = self.run({"command": ["sh", "-c", "parted", "-l"]})
-
-if response["rc"] != 0:
-if re.search(r'unrecognised disk label', response["stdout"]):
-raise CommandException("There are no partitions on disk %s" % disk)
-raise CommandException("Unable to find any partitions.")
-mounts = self.getMountPoints()
-
-currentDisk, currentLabel = '', ''
-retArr, vols, volMntMap = [], [], {}
-for line in self.split(response["stdout"]):
-currentDiskMatch = re.search(r'/dev((/\w+)*)', line)
-if currentDiskMatch:
-currentDisk = "/dev" + currentDiskMatch.group(1)
-continue
-
-currentLabelMatch = re.search(r'Partition Table: (\w+)', line)
-if currentLabelMatch:
-currentLabel = currentLabelMatch.group(1)
-continue
-
-partitionMatch = re.search(r'\d+\s+\d+', line)
-if partitionMatch:
-vols = re.split(r'\s+', self.trim(line))
-partition = currentDisk + vols[0]
-if len(vols) > 5 and re.match(r'\w+\d*', vols[5]):
-fs = vols[5]
-else:
-fs = None
-if not fs and raw:
-continue
-mnt = []
-if partition in mounts and "mount_points" in mounts[partition]:
-mnt = mounts[partition]["mount_points"]
-
-tmpInfo = {"partition": partition,
-"mounts": mnt,
-"label": currentLabel,
-"fs": fs,
-"type": vols[4],
-"size": vols[3],
-"start": vols[1],
-"end": vols[2],
-"status": None,
-"info": "linux"}
-retArr.append(tmpInfo)
-volMntMap[partition] = tmpInfo
-return retArr
-
-def getDiskDeviceName(self, lunComponent):
-"""获取指定Lun对象映射到主机的设备名称
-
-Args:
-lunComponent (instance): lun对象.
-
-Returns:
-device (str|None): 映射的Lun对象的设备名称.
-
-Raises:
-CommandException: 命令执行失败.
-
-Examples:
-device = hostObj._getDiskDevice(lun)
-Output:
->"/dev/sdb"
-
-"""
-result = []
-for time in xrange(5):
-try:
-if time == 4:
-result = self._getDiskDeviceNew(lunComponent)
-else:
-result = self._getDiskDevice(lunComponent)
-break
-except CommandException as e:
-if e.message.startswith('No device name was found for lun ') and time < 4:
-sleep(1)
-self.rescanDisk()
-else:
-raise CommandException(e.message)
-return result
-
-def getNasMountPoints(self, fileComponent):
-"""Get the Filesystem mount point in linux environment
-
-Args:
-fileComponent Type(FilesystemBase): FileSystem component object
-
-Returns:
-mountPoint Type(str): The file system mount point in linux environment
-
-Raises:
-None
-
-Changes:
-2015/12/24 y00305138 Created
-
-"""
-fileName = ""
-if isinstance(fileComponent, FilesystemBase):
-fileName = fileComponent.getProperty("name")
-else:
-raise InvalidParamException("%s is not a filesystem Component. " % fileComponent)
-
-response = self.run({"command": ["sh", "-c", "df"]})
-
-if response["rc"] != 0:
-raise CommandException(response["stderr"])
-
-lines = self.split(response["stdout"])
-for line in lines:
-if re.search(r'/' + str(fileName) + '', line):
-tmpStr = self.trim(line)
-tmpMatch = re.search('\s+(\S+)$$', tmpStr)
-if tmpMatch:
-device = self.trim(tmpMatch.group())
-return device
-return None
-
-def getFileShareIoPath(self, fileComponent):
-"""Get the IO path for special file share directory
-
-Args:
-fileComponent Type(FilesystemBase): FileSystem component objectone
-
-Returns:
-None
-
-Raises:
-None
-
-Changes:
-2015/12/24 y00305138 Created
-
-"""
-fileMountPoint = self.getNasMountPoints(fileComponent)
-
-if fileMountPoint is not None:
-ioFile = "%s/%s" % (fileMountPoint, "io_file")
-self.createFile(ioFile)
-
-return ioFile
-else:
-raise CommandException("%s has no share directory" % fileComponent)
-
-def getIqn(self):
-"""获取该主机的Iqn信息
-
-Args:
-None.
-
-Returns:
-iqn (str): 该主机的iqn信息.
-
-Raises:
-None.
-
-Examples:
-hostObj.getIqn()
-Output:
-"iqn.2013-12.site:01:669c365dfece"
-"""
-self._checkOpenIscsi()
-return self._parseIqn("/etc/iscsi/initiatorname.iscsi")
-
-def removeIqn(self):
-"""移除主机上的Iqn信息
-
-Examples:
-self.host.removeIqn()
-
-"""
-self._checkOpenIscsi()
-
-def iqnParser(output):
-"""解析主机上的Iqn信息
-
-Args:
-output type(str): 命令回显
-
-Return:
-result: ['iqn.2006-08.com.huawei:oceanstor:2100e09796b5fa4f::21f01:130.46.81.90',
-'iqn.2006-08.com.huawei:oceanstor:2100e09796b5fa4f::1020700:8.47.81.91']
-
-"""
-result = []
-# 将回显根据换行符进行切割
-if output:
-output = re.split("\x0d?\x0a|\x0d", output)
-else:
-return result
-for line in output:
-if 'iqn' in line:
-iqn = line.split()[1]
-result.append(iqn)
-return result
-
-output = self.run({"command": ["sh", "-c", "iscsiadm", "-m", "node"]})
-if output:
-output = output['stdout']
-iqns = iqnParser(output)
-if iqns:
-for iqn in iqns:
-# 注销iqn
-self.run({"command": ["sh", "-c", "iscsiadm", "-m", "node", "--targetname",
-"%s" % iqn, "--logout"]})
-# 删除iqn
-response = self.run({"command": ["sh", "-c", "iscsiadm", "-m", "node", "--op",
-"delete", "--targetname", "%s" % iqn]})
-if response["rc"] != 0:
-self.logger.debug("Remove iqn: [%s] failed." % iqn)
-else:
-self.logger.debug("Remove iqn: [%s] successfully." % iqn)
-
-def _checkOpenIscsi(self):
-"""检查主机是否安装open iSCSI软件, 该方法外部不可直接调用
-
-Args:
-None.
-
-Returns:
-None.
-
-Raises:
-FileNotFoundException: 未安装openIscsi软件.
-
-Examples:
-None.
-
-"""
-
-if self.which("iscsiadm"):
-self.openIscsi = True
-else:
-raise FileNotFoundException("Open iSCSI is not installed on this Host.")
-
-def _parseIqn(self, filePath):
-"""获取主机的Iqn信息, 该方法外部不可直接调用
-
-Args:
-filePath (str): iqn所在的文件路径, 默认指定为: "/etc/iscsi/initiatorname.iscsi".
-
-Returns:
-iqn (str): 主机的iqn.
-
-Raises:
-FileNotFoundException: 指定的iqn文件不存在或打开文件失败.
-
-Examples:
-None.
-
-"""
-iqn = ""
-response = self.run({"command": ["sh", "-c", "cat", filePath]})
-if response["rc"] != 0:
-raise FileNotFoundException("Could not found the Open iSCSI initiatorname file. Please make "
-"sure you have Open iSCSI installed properly.")
-
-lines = self.split(self.trim(response["stdout"]))
-
-for line in lines:
-if re.search(r'cat', line):
-continue
-match = re.search(r'InitiatorName=(\S+)', line)
-if match:
-iqn = match.group(1)
-return iqn
-
-def _service(self, name, action):
-"""Linux操作系统服务查询、启动、停止, 该方法外部不可直接调用.
-
-Args:
-name (str): 服务名称.
-action (str): 服务需要执行的操作, 取值范围为: start、stop、status.
-
-Returns:
-status (str): 当执行状态查询时返回服务的状态, 返回值为"running"或"stopped".
-当执行启动或停止服务操作时返回None.
-
-Raises:
-InvalidParamException: action非法.
-
-Examples:
-None.
-
-"""
-if re.match(r'(start|stop|status)', action) is None:
-raise InvalidParamException("Service action is invalid.")
-
-response = self.run({"command": ["sh", "-c", "service", name, action]})
-
-if action == "status" and response["stdout"]:
-if re.search(r'running', response["stdout"]):
-return "running"
-elif re.search(r'stopped|unused', response["stdout"]):
-return "stopped"
-
-elif action == "status" and response["stdout"] is None:
-self.logger.warn("Query Service %s status Failed, Error:/n %s" % (name, response["stderr"]))
-
-if (action == "start" or action == "stop") \
-and response["rc"] != 0 and re.search(r'done|ok', response["stdout"], re.I) is None:
-raise CommandException("Service %s %s Failed" % (name, action))
-
-def startService(self, name):
-"""打开指定Linux操作系统服务
-
-Args:
-name (str): 服务名称.
-
-Returns:
-None.
-
-Raises:
-CommandException: 命令执行失败.
-
-Examples:
-host.startService("smb")
-
-"""
-return self._service(name, "start")
-
-def stopService(self, name):
-"""停止指定Linux操作系统服务
-
-Args:
-name (str): 服务名称.
-
-Returns:
-None.
-
-Raises:
-CommandException: 命令执行失败.
-
-Examples:
-hostObj.stopService("smb")
-
-"""
-return self._service(name, "stop")
-
-def getServiceStatus(self, name):
-"""获取指定Linux操作系统的服务状态
-
-Args:
-name (str): 服务名称.
-
-Returns:
-status (str): 服务状态信息， 返回值为"running"或"stopped".
-
-Raises:
-CommandException: 命令执行失败.
-
-Examples:
-hostObj.getServiceStatus("smb")
-Output:
->"running"
-
-"""
-return self._service(name, "status")
-
-def getHbaInfo(self):
-"""获取主机HBA卡的信息
-
-Args:
-None.
-
-Returns:
-hbaDict (dict): 主机HBA信息，hbaDict键值对说明:
-
-: {"port": ,
-"node": }
-port (str): hba卡port信息.
-node (str): hba卡node信息.
-
-
-Raises:
-CommandException: 命令执行失败.
-
-Examples:
-hbaInfo = hostObj.getHbaInfo()
-Output:
->{'21:00:00:24:ff:49:99:e4': {'node': '20:00:00:24:ff:49:99:e4',
-'port': '21:00:00:24:ff:49:99:e4'},
-'21:00:00:24:ff:49:99:e5': {'node': '20:00:00:24:ff:49:99:e5',
-'port': '21:00:00:24:ff:49:99:e5'},
-'21:00:00:24:ff:54:3a:5a': {'node': '20:00:00:24:ff:54:3a:5a',
-'port': '21:00:00:24:ff:54:3a:5a'},
-'21:00:00:24:ff:54:3a:5b': {'node': '20:00:00:24:ff:54:3a:5b',
-'port': '21:00:00:24:ff:54:3a:5b'}}
-
-"""
-response = self.run({"command": ["sh", "-c", "ls", "-l", "\'/sys/class/fc_host/\'"]})
-if response["rc"] != 0 and re.search(r'No such file or directory', response["stderr"]):
-self.logger.warn("No HBA card found on host.", self.getIpAddress())
-return
-elif response["rc"] != 0:
-raise CommandException(response["stderr"])
-
-lines = self.split(response["stdout"])
-hbaAdapter = []
-
-for line in lines:
-if re.search(r'host[0-9]+', line):
-self.logger.info('#####[Debug Log]%s' % line)
-hbaAdapter.append(re.search(r'host[0-9]+', line).group())
-
-hbaDict = {}
-for adapter in hbaAdapter:
-response = self.run({"command": ["sh", "-c", "cat", "port_name", "node_name"],
-"directory": "/sys/class/fc_host/%s" % adapter})
-lines = self.split(response["stdout"])
-for line in lines:
-if re.search(r'cat', line):
-continue
-port = None
-if re.match(r'^0x', line):
-port = self.normalizeWwn(line)
-if port and re.match(r'^0x', lines[lines.index(line) + 1]):
-hbaDict[port] = {"port": port,
-"node": self.normalizeWwn(lines[lines.index(line) + 1])}
-break
-return hbaDict
-
-def getProcessId(self, processName):
-"""获取指定进程名称的进程ID
-
-Args:
-processName (str): 进程名称.
-
-Returns:
-reArr (list): 指定进程名称的所有进程id.
-
-Raises:
-CommandException: 命令执行失败.
-
-Examples:
-pids = hostObj.getProcessId("sshd")
-Output:
->['22912', '23430', '27333', '29117', '30581']
-
-"""
-response = self.run({"command": ["sh", "-c", "ps", "-C", processName, "-o", "pid"]})
-if response["rc"] != 0:
-raise CommandException("Unable to find any processes with given process name: %s" % processName)
-
-retArr = []
-for line in self.split(response["stdout"]):
-tmpMatch = re.match(r'\d+', self.trim(line))
-if tmpMatch:
-retArr.append(tmpMatch.group())
-return retArr
-
-def getTargets(self):
-"""获取主机中的ISCSI所有目标器
-
-Args:
-None
-
-Returns:
-targets (dict): 所有查询到的target信息, targets键值对说明:
-key (str): 目标器名称.
-value (list): 目标器所属的IP(target portal).
-
-Raises:
-CommandException: 命令执行失败.
-
-Examples:
-targets = hostObj.getTargets()
-Output:
->{'iqn.2006-08.com.huawei:oceanstor:21000022a11055fa::1022006:129.94.10.11': ['129.94.10.11'],
-'iqn.2006-08.com.huawei:oceanstor:21000022a11055fa::22006:129.94.10.10': ['129.94.10.10'],
-'iqn.2006-08.com.huawei:oceanstor:2100313233343536::1020200:129.181.100.107': ['129.181.100.107'],
-'iqn.2006-08.com.huawei:oceanstor:2100313233343536::20200:128.181.100.107': ['128.181.100.107'],
-'iqn.2006-08.com.huawei:oceanstor:2100ac853ddbc42f::1020000:128.94.255.10': ['128.94.255.10'],
-'iqn.2006-08.com.huawei:oceanstor:2100ac853ddbc42f::20000:129.94.255.10': ['129.94.255.10'],
-'iqn.2006-08.com.huawei:oceanstor:2100ac853ddbc4a9::20000:128.94.255.12': ['128.94.255.12'],
-'iqn.2006-08.com.huawei:oceanstor:2100ac853ddbc4a9::20000:129.94.255.12': ['129.94.255.12']}
-
-"""
-self._checkOpenIscsi()
-
-response = self.run({"command": ["sh", "-c", "iscsiadm", "-m", "node", "list"]})
-targets = {}
-if response["rc"] != 0:
-self.logger.warn(response['stderr'])
-return targets
-
-lines = self.split(response["stdout"])
-for line in lines:
-tmpMatch = re.match("(\S+):\S+,\d+\s+(\S+)", line)
-if tmpMatch:
-ip = tmpMatch.group(1)
-target = tmpMatch.group(2)
-if target in targets:
-targets[target].append(ip)
-else:
-targets[target] = [ip]
-
-return targets
-
-def upadminShowPath(self):
-"""获取upadmin show path的回显
-
-Args:
-None
-
-Returns:
-targets (list): 所有查询到的target信息,.
-
-Raises:
-CommandException: 命令执行失败.
-
-Examples:
-targets = hostObj.upadminShowPath()
-Output:
-Path ID Initiator Port Array Name Controller Target Port Path State Check State Port Type
-0 21000024ff4b81f8 Huawei.Storage 0A 22089017acb03969 Normal -- FC
-2 21000024ff4b81f9 Huawei.Storage 0B 24109017acb03969 Normal -- FC
-Result:
-[
-{
-'path_id' : '0',
-'initiator_port': '21000024ff4b81f8',
-'array_name': 'Huawei.Storage',
-'controller': '0A',
-'target_port': '22089017acb03969',
-'path_state': 'Normal',
-'check_state': '--',
-'port_type':'FC'
-},
-{
-'path_id' : '2',
-'initiator_port': '21000024ff4b81f9',
-'array_name': 'Huawei.Storage',
-'controller': '0B',
-'target_port': '24109017acb03969',
-'path_state': 'Normal',
-'check_state': '--',
-'port_type':'FC'
-}
-]
-
-"""
-response = self.run({"command": ["sh", "-c", "upadmin", "show", "path"]})
-targetList = []
-if response["stdout"] is None:
-return targetList
-
-lines = self.split(response["stdout"])
-compileSplit = re.compile('\s{2,}')
-compileFind = re.compile('\d{1,}')
-keys = []
-
-for line in lines:
-targetDict = {}
-# 过滤分隔符
-if line.endswith('----'):
-continue
-# 匹配表头，并且作为后续用的key值
-if not re.findall(compileFind, line):
-tempsKeys = re.split(compileSplit, line)
-for key in tempsKeys:
-key = key.strip()
-keys.append(key.lower().replace(' ', '_'))
-continue
-line = line.strip()
-values = re.split(compileSplit, line)
-for (key, value) in zip(keys, values):
-targetDict[key] = value
-
-targetList.append(targetDict)
-
-return targetList
-
-def upadminSetPathState(self, pathstate, pathIDList=[], portId=None, number=None):
-"""在主机侧端口链路的断开和恢复
-
-Args:
-storageDevice (object): storageDevice对象
-tpgstate (str): 开启或禁用控制器模块:enable、disable
-portId (str): 端口ID
-pathIDList (list): 需要回复的链路id
-
-Returns:
-None
-
-Raises:
-CommandException: 命令执行失败.
-
-Examples:
-pathIDList = host.upadminSetPathState(pathstate = "disable", controllerId = "0A")
-host.upadminSetPathState(pathstate = "enable", pathIDList = pathIDList)
-
-
-"""
-pathInfoList = self.upadminShowPath()
-if portId is not None:
-for pathInfo in pathInfoList:
-if pathInfo["port_id"] == portId:
-pathIDList.append(pathInfo["path_id"])
-if number is not None:
-if pathIDList == []:
-for pathInfo in pathInfoList:
-if pathInfo["path_state"] == "Normal":
-pathIDList.append(pathInfo["path_id"])
-if len(pathIDList) < number:
-raise InvalidParamException("normal path number:%s is not enough" % len(pathIDList))
-else:
-pathIDList = random.sample(pathIDList, number)
-
-if pathIDList == []:
-raise CommandException("Unable to find any path id for to SetPathState.")
-for pathId in pathIDList:
-commands = ["sh", "-c", "upadmin", "set", "pathstate=" + pathstate, "path_id=" + str(pathId)]
-response = self.run({"command": commands})
-if re.search(r'Succeeded in executing the command', response["stdout"]):
-self.logger.debug("tpgstate set succeeded.")
-else:
-self.logger.debug("tpgstate set succeeded.")
-# raise CommandException("pathstate set failed,path id is:%s." % pathId)
-return pathIDList
-
-def upadminShowArrary(self):
-"""获取upadmin show array的回显
-
-Args:
-None
-
-Returns:
-targets (list): 所有查询到的阵列信息,.
-
-Raises:
-CommandException: 命令执行失败.
-
-Examples:
-targets = hostObj.upadminShowArrary()
-Output:
-Array ID Array Name Array SN Vendor Name Product Name
-0 Huawei.Storage DAu71fb15rf060f00004 HUAWEI XSG1
-Result:
-[ {'array_id': '0', 'vendor_name': 'HUAWEI', 'array_name': 'Huawei.Storage', 'product_name': 'XSG1', 'array_sn': 'DAu71fb15rf060g00004'}
-]
-
-"""
-response = self.run({"command": ["sh", "-c", "upadmin", "show", "array"]})
-targetList = []
-if response["stdout"] is None:
-return targetList
-
-lines = self.split(response["stdout"])
-compileSplit = re.compile('\s{2,}')
-compileFind = re.compile('\d{1,}')
-keys = []
-
-for line in lines:
-targetDict = {}
-# 过滤分隔符
-if line.endswith('----'):
-continue
-# 匹配表头，并且作为后续用的key值
-if not re.findall(compileFind, line):
-tempsKeys = re.split(compileSplit, line)
-for key in tempsKeys:
-key = key.strip()
-keys.append(key.lower().replace(' ', '_'))
-continue
-line = line.strip()
-values = re.split(compileSplit, line)
-for (key, value) in zip(keys, values):
-targetDict[key] = value
-
-targetList.append(targetDict)
-
-return targetList
-
-def upadminSetTPGState(self, storageDevice, tpgstate, controllerId):
-"""实现主机的控制器模块的故障和恢复
-
-Args:
-storageDevice (object): storageDevice对象
-tpgstate (str): 开启或禁用控制器模块:enable、disable
-controllerId (str): 控制器ID
-
-Returns:
-None
-
-Raises:
-CommandException: 命令执行失败.
-
-Examples:
-host.upadminSetTPGState(storageDevice = self.storageDevice, tpgstate = "disable", controllerId = "0A")
-host.upadminSetTPGState(storageDevice = self.storageDevice, tpgstate = "enable", controllerId = "0A")
-
-
-"""
-arrayInfoList = self.upadminShowArrary()
-arrayID = None
-for arrayInfo in arrayInfoList:
-if arrayInfo["array_sn"] == storageDevice.SN:
-arrayID = arrayInfo["array_id"]
-if arrayID is None:
-raise CommandException("Unable to find any array id for storage sn:%s." % storageDevice.SN)
-commands = ["sh", "-c", "upadmin", "set", "tpgstate=" + tpgstate, "array_id=" + str(arrayID),
-"tpg_id=" + controllerId]
-response = self.run({"command": commands})
-if re.search(r'Succeeded in executing the command', response["stdout"]):
-self.logger.debug("tpgstate set succeeded.")
-else:
-raise CommandException("tpgstate set failed.")
+            self.run({"command": ["sh",
+                                  "-c",
+                                  "sed -i \'s/#ClientAliveInterval 0/ClientAliveInterval 60/g\' sshd_config"],
+                                  "directory": "/etc/ssh"})
+            self.run({"command": ["sh",
+                                  "-c",
+                                  "sed -i \'s/#ClientAliveCountMax 3/ClientAliveCountMax 3/g\' sshd_config"],
+                                  "directory": "/etc/ssh"})
+            self.run({"command": ["sh",
+                                  "-c",
+                                  "service sshd reload"]})
+
+    def rescanDisk(self):
+        """安装华为自研多路径的情况下重新扫描映射的LUN
+        Examples:
+            hostObj.rescanDisk()
+        """
+        self.logger.info("Starting to rescan the disks with command 'hot_add' on %s" % self.getIpAddress())
+        try:
+            self.glock.acquire()
+            for times in range(3):
+                result = self.run({"command": ["sh", "-c", "hot_add"], "timeout": 1800})['stdout']
+                if result:
+                    if result.find('ERROR') < 0:
+                        return
+                    sleep(1)
+        finally:
+            self.glock.release()
+
+    def rescanDiskNoUltraPath(self):
+        """不安装华为自研多路径的情况下重新扫描映射的LUN
+
+        Examples:
+            self.host.rescanDiskNoUltraPath()
+        """
+        self.logger.info("Starting to rescan the disks with command 'rescan-scsi-bus.sh' on %s" % self.getIpAddress())
+        try:
+            self.glock.acquire()
+            # 当三条命令都没有报错，则退出，如果有命令报错，则循环执行三次
+            for times in range(3):
+                result1 = self.run({"command": ["sh", "-c", "rescan-scsi-bus.sh"]})['stdout']
+                result2 = self.run({"command": ["sh", "-c", "lsscsi"]})['stdout']
+                result3 = self.run({"command": ["sh", "-c", "fdisk -l"]})['stdout']
+                # 如下命令为重新扫盘
+            p = '\[(\d+):\d+:\d+:\d+\]\s+disk\s+HUAWEI\s+XSG1'
+            rstList = list(set(re.findall(p, result2, re.S)))
+            for rst in rstList:
+                self.run({'command': ['sh', '-c', 'echo "- - -" > /sys/class/scsi_host/host%s/scan' % rst]})
+            i = 0
+            for result in (result1, result2, result3):
+                if result:
+                    if result.find('ERROR') < 0:
+                        i += 1
+                    sleep(1)
+            if i == 3:
+                return
+        finally:
+            self.glock.release()
+
+    def getDisk(self, diskLabel):
+        """获取主机指定的单个磁盘信息, 该方法仅适用于Linux
+
+        Args:
+            diskLabel (str): 映射的Lun在Linux上的设备名称，如: "/dev/sdb"(不是分区, 如: "/dev/sdb1").
+
+        Returns:
+            diskInfo (dict): 获取的磁盘信息, diskInfo键值对说明:
+            size (str): 指定磁盘的总容量.
+            partition (dict): 指定磁盘的分区信息, getPartitions()接口获取, 参考由getPartitions()说明.
+
+        Raises:
+            CommandException: 指定磁盘不存在时抛出异常.
+
+        Examples:
+            hostObj.getDisk("/dev/sdb")
+            Output:
+            {'partitions': [
+            {'end': '3051MB',
+            'fs': None,
+            'info': 'linux',
+            'label': 'msdos',
+            'mounts': [],
+            'partition': '/dev/sdb3',
+            'size': '1024MB',
+            'start': '2027MB',
+            'status': None,
+            'type': 'primary'},],
+            'size': '10.7GB'}
+        """
+        diskInfo = {}
+        response = self.run({"command": ["sh", "-c", "fdisk", diskLabel, "-l"]})
+
+        if response["rc"] != 0:
+            raise CommandException("Could not find disk %s" % diskLabel)
+
+        size = re.search(r"((\d+(\.\d*)?)|0\.\d+) ([GKMTP]?B)", response["stdout"])
+        if size:
+            size = size.group()
+        hasPartition = True
+        if re.search(r'doesn\'t contain a valid partition table', response["stdout"]):
+            hasPartition = False
+        if re.search(r'' + str(diskLabel) + '\d+', response["stdout"]) is None:
+            hasPartition = False
+
+        partitions = []
+        if hasPartition:
+            partitions = self.getPartitions(disk=diskLabel)
+        diskInfo = {"size": size.replace(" ", ""),
+        "partitions": partitions}
+        return diskInfo
+
+    def getDisks(self):
+        """获取当前主机的磁盘信息，包含磁盘名称和容量"""
+        diskInfo = {}
+        response = self.run({"command": ["sh", "-c", "fdisk", "-l"]})
+
+        if response["rc"] != 0:
+            raise CommandException("Could not find disks")
+
+        regex = re.compile(r'^Disk\s*(/dev/\S*):\s*(\d+\.\d+\s+\w+),')
+        lines = self.split(response['stdout'])
+        for l in lines:
+            matcher = regex.match(l)
+            if matcher:
+                disk = matcher.groups()[0]
+                size = matcher.groups()[1]
+                diskInfo.update({disk: size})
+        return diskInfo
+
+    def getPartitions(self, lunComponent=None, disk=None, raw=False):
+        """获取指定的Lun对象或磁盘设备的分区信息
+
+        Args:
+            lunComponent (instance): Lun实例对象，lunComponent和disk都未指定时获取全部分区, 可选参数, 默认为None.
+            disk (str): 需要获取分区信息的磁盘设备, 可选参数, 默认为None, 如: "/dev/sdb".
+            raw (bool): 是否只获取文件系统类型为raw的分区, True为只获取raw分区，False获取全部,
+            -可选参数，默认为False.
+
+        Returns:
+            retArr (dict)：指定Lun对象或磁盘设备的分区信息,reArr键值对说明:
+            end (str): 分区在磁盘设备的结束位置, Linux操作系统专有.
+            fs (str): 分区的文件系统类型.
+            info (str): 分区系统信息, linux系统分区一般为"Linux".
+            label (str): 分区标签.
+            mounts (list): 分区的挂载目录, 一个分区可以挂载多个目录.
+            partition (str): 分区名称.
+            size (str): 分区大小.
+            start (str): 分区在磁盘设备的开始位置, Linux操作系统专有.
+            status (str): Linux默认为None.
+            type (str): 分区类型, 如: primary, extended等.
+
+        Raises:
+            CommandException: 命令执行失败，未找到分区时抛出异常.
+
+        Examples:
+            hostObj.getPartitions(disk="/dev/sdb", raw=True) or hostObj.getPartitions(lun=LunObj, raw=True)
+            Output:
+            [{'end': '1003MB',
+            'fs': 'ext2',
+            'info': 'linux',
+            'label': 'msdos',
+            'mounts': [],
+            'partition': '/dev/sdb1',
+            'size': '1003MB',
+            'start': '32.3kB',
+            'status': None,
+            'type': 'primary'},
+            {'end': '4075MB',
+            'fs': 'ext2',
+            'info': 'linux',
+            'label': 'msdos',
+            'mounts': ['/mnt'],
+            'partition': '/dev/sdb4',
+            'size': '1024MB',
+            'start': '3051MB',
+            'status': None,
+            'type': 'primary'}]
+        """
+        partitions = []
+        if lunComponent:
+            disk = self._getDiskDevice(lunComponent)
+
+        if disk:
+            response = self.run({"command": ["sh", "-c", "parted", disk, "-s", "p"]})
+        else:
+            response = self.run({"command": ["sh", "-c", "parted", "-l"]})
+
+        if response["rc"] != 0:
+            if re.search(r'unrecognised disk label', response["stdout"]):
+                raise CommandException("There are no partitions on disk %s" % disk)
+            raise CommandException("Unable to find any partitions.")
+        mounts = self.getMountPoints()
+
+        currentDisk, currentLabel = '', ''
+        retArr, vols, volMntMap = [], [], {}
+        for line in self.split(response["stdout"]):
+            currentDiskMatch = re.search(r'/dev((/\w+)*)', line)
+            if currentDiskMatch:
+                currentDisk = "/dev" + currentDiskMatch.group(1)
+                continue
+
+            currentLabelMatch = re.search(r'Partition Table: (\w+)', line)
+            if currentLabelMatch:
+                currentLabel = currentLabelMatch.group(1)
+                continue
+
+            partitionMatch = re.search(r'\d+\s+\d+', line)
+            if partitionMatch:
+                vols = re.split(r'\s+', self.trim(line))
+                partition = currentDisk + vols[0]
+                if len(vols) > 5 and re.match(r'\w+\d*', vols[5]):
+                    fs = vols[5]
+                else:
+                    fs = None
+                if not fs and raw:
+                    continue
+                mnt = []
+                if partition in mounts and "mount_points" in mounts[partition]:
+                    mnt = mounts[partition]["mount_points"]
+
+                tmpInfo = {"partition": partition,
+                            "mounts": mnt,
+                            "label": currentLabel,
+                            "fs": fs,
+                            "type": vols[4],
+                            "size": vols[3],
+                            "start": vols[1],
+                            "end": vols[2],
+                            "status": None,
+                            "info": "linux"}
+                retArr.append(tmpInfo)
+                volMntMap[partition] = tmpInfo
+        return retArr
+
+    def getDiskDeviceName(self, lunComponent):
+        """获取指定Lun对象映射到主机的设备名称
+
+        Args:
+            lunComponent (instance): lun对象.
+
+        Returns:
+            device (str|None): 映射的Lun对象的设备名称.
+
+        Raises:
+            CommandException: 命令执行失败.
+
+        Examples:
+            device = hostObj._getDiskDevice(lun)
+            Output:
+            >"/dev/sdb"
+        """
+        result = []
+        for time in xrange(5):
+            try:
+                if time == 4:
+                    result = self._getDiskDeviceNew(lunComponent)
+                else:
+                    result = self._getDiskDevice(lunComponent)
+                    break
+            except CommandException as e:
+                if e.message.startswith('No device name was found for lun ') and time < 4:
+                    sleep(1)
+                    self.rescanDisk()
+            else:
+                raise CommandException(e.message)
+        return result
+
+    def getNasMountPoints(self, fileComponent):
+        """Get the Filesystem mount point in linux environment
+
+        Args:
+            fileComponent Type(FilesystemBase): FileSystem component object
+
+        Returns:
+            mountPoint Type(str): The file system mount point in linux environment
+
+        Raises:
+            None
+
+        Changes:
+            2015/12/24 y00305138 Created
+        """
+        fileName = ""
+        if isinstance(fileComponent, FilesystemBase):
+            fileName = fileComponent.getProperty("name")
+        else:
+            raise InvalidParamException("%s is not a filesystem Component. " % fileComponent)
+        response = self.run({"command": ["sh", "-c", "df"]})
+        if response["rc"] != 0:
+            raise CommandException(response["stderr"])
+        lines = self.split(response["stdout"])
+        for line in lines:
+            if re.search(r'/' + str(fileName) + '', line):
+                tmpStr = self.trim(line)
+                tmpMatch = re.search('\s+(\S+)$$', tmpStr)
+                if tmpMatch:
+                    device = self.trim(tmpMatch.group())
+                    return device
+        return None
+
+    def getFileShareIoPath(self, fileComponent):
+        """Get the IO path for special file share directory
+
+        Args:
+            fileComponent Type(FilesystemBase): FileSystem component objectone
+
+        Returns:
+            None
+
+        Raises:
+            None
+
+        Changes:
+            2015/12/24 y00305138 Created
+        """
+        fileMountPoint = self.getNasMountPoints(fileComponent)
+
+        if fileMountPoint is not None:
+            ioFile = "%s/%s" % (fileMountPoint, "io_file")
+            self.createFile(ioFile)
+            return ioFile
+        else:
+            raise CommandException("%s has no share directory" % fileComponent)
+
+    def getIqn(self):
+        """获取该主机的Iqn信息
+
+        Args:
+            None.
+
+        Returns:
+            iqn (str): 该主机的iqn信息.
+
+        Raises:
+            None.
+
+        Examples:
+            hostObj.getIqn()
+
+        Output:
+            "iqn.2013-12.site:01:669c365dfece"
+        """
+        self._checkOpenIscsi()
+            return self._parseIqn("/etc/iscsi/initiatorname.iscsi")
+
+    def removeIqn(self):
+        """移除主机上的Iqn信息
+
+        Examples:
+            self.host.removeIqn()
+
+        """
+        self._checkOpenIscsi()
+
+        def iqnParser(output):
+            """解析主机上的Iqn信息
+
+            Args:
+                output type(str): 命令回显
+
+            Return:
+                result: ['iqn.2006-08.com.huawei:oceanstor:2100e09796b5fa4f::21f01:130.46.81.90',
+                'iqn.2006-08.com.huawei:oceanstor:2100e09796b5fa4f::1020700:8.47.81.91']
+            """
+            result = []
+            # 将回显根据换行符进行切割
+            if output:
+                output = re.split("\x0d?\x0a|\x0d", output)
+            else:
+                return result
+            for line in output:
+                if 'iqn' in line:
+                    iqn = line.split()[1]
+                    result.append(iqn)
+            return result
+
+        output = self.run({"command": ["sh", "-c", "iscsiadm", "-m", "node"]})
+        if output:
+            output = output['stdout']
+            iqns = iqnParser(output)
+            if iqns:
+                for iqn in iqns:
+                    # 注销iqn
+                    self.run({"command": ["sh", "-c", "iscsiadm", "-m", "node",
+                                          "--targetname", "%s" % iqn, "--logout"]})
+                    # 删除iqn
+                    response = self.run({"command": ["sh", "-c", "iscsiadm", "-m", "node", "--op",
+                                                     "delete", "--targetname", "%s" % iqn]})
+                    if response["rc"] != 0:
+                        self.logger.debug("Remove iqn: [%s] failed." % iqn)
+                    else:
+                        self.logger.debug("Remove iqn: [%s] successfully." % iqn)
+
+    def _checkOpenIscsi(self):
+        """检查主机是否安装open iSCSI软件, 该方法外部不可直接调用
+
+        Args:
+            None.
+
+        Returns:
+            None.
+
+        Raises:
+            FileNotFoundException: 未安装openIscsi软件.
+
+        Examples:
+            None.
+        """
+        if self.which("iscsiadm"):
+            self.openIscsi = True
+        else:
+            raise FileNotFoundException("Open iSCSI is not installed on this Host.")
+
+    def _parseIqn(self, filePath):
+        """获取主机的Iqn信息, 该方法外部不可直接调用
+
+        Args:
+            filePath (str): iqn所在的文件路径, 默认指定为: "/etc/iscsi/initiatorname.iscsi".
+
+        Returns:
+            iqn (str): 主机的iqn.
+
+        Raises:
+            FileNotFoundException: 指定的iqn文件不存在或打开文件失败.
+
+        Examples:
+            None.
+        """
+        iqn = ""
+        response = self.run({"command": ["sh", "-c", "cat", filePath]})
+        if response["rc"] != 0:
+            raise FileNotFoundException("Could not found the Open iSCSI initiatorname file. Please make sure you have Open iSCSI installed properly.")
+
+        lines = self.split(self.trim(response["stdout"]))
+
+        for line in lines:
+            if re.search(r'cat', line):
+                continue
+            match = re.search(r'InitiatorName=(\S+)', line)
+            if match:
+                iqn = match.group(1)
+                return iqn
+
+    def _service(self, name, action):
+        """Linux操作系统服务查询、启动、停止, 该方法外部不可直接调用.
+
+        Args:
+            name (str): 服务名称.
+            action (str): 服务需要执行的操作, 取值范围为: start、stop、status.
+
+        Returns:
+            status (str): 当执行状态查询时返回服务的状态, 返回值为"running"或"stopped".
+            当执行启动或停止服务操作时返回None.
+
+        Raises:
+            InvalidParamException: action非法.
+
+        Examples:
+            None.
+        """
+        if re.match(r'(start|stop|status)', action) is None:
+            raise InvalidParamException("Service action is invalid.")
+
+        response = self.run({"command": ["sh", "-c", "service", name, action]})
+
+        if action == "status" and response["stdout"]:
+            if re.search(r'running', response["stdout"]):
+                return "running"
+            elif re.search(r'stopped|unused', response["stdout"]):
+                return "stopped"
+        elif action == "status" and response["stdout"] is None:
+            self.logger.warn("Query Service %s status Failed, Error:/n %s" % (name, response["stderr"]))
+
+        if (action == "start" or action == "stop") \
+        and response["rc"] != 0 and re.search(r'done|ok', response["stdout"], re.I) is None:
+            raise CommandException("Service %s %s Failed" % (name, action))
+
+    def startService(self, name):
+        """打开指定Linux操作系统服务
+
+        Args:
+            name (str): 服务名称.
+
+        Returns:
+            None.
+
+        Raises:
+            CommandException: 命令执行失败.
+
+        Examples:
+            host.startService("smb")
+        """
+        return self._service(name, "start")
+
+    def stopService(self, name):
+        """停止指定Linux操作系统服务
+
+        Args:
+            name (str): 服务名称.
+
+        Returns:
+            None.
+
+        Raises:
+            CommandException: 命令执行失败.
+
+        Examples:
+            hostObj.stopService("smb")
+        """
+        return self._service(name, "stop")
+
+    def getServiceStatus(self, name):
+        """获取指定Linux操作系统的服务状态
+
+        Args:
+            name (str): 服务名称.
+
+        Returns:
+            status (str): 服务状态信息， 返回值为"running"或"stopped".
+
+        Raises:
+            CommandException: 命令执行失败.
+
+        Examples:
+            hostObj.getServiceStatus("smb")
+        Output:
+            >"running"
+        """
+        return self._service(name, "status")
+
+    def getHbaInfo(self):
+    """获取主机HBA卡的信息
+
+    Args:
+    None.
+
+    Returns:
+    hbaDict (dict): 主机HBA信息，hbaDict键值对说明:
+
+    : {"port": ,
+    "node": }
+    port (str): hba卡port信息.
+    node (str): hba卡node信息.
+
+
+    Raises:
+    CommandException: 命令执行失败.
+
+    Examples:
+    hbaInfo = hostObj.getHbaInfo()
+    Output:
+    >{'21:00:00:24:ff:49:99:e4': {'node': '20:00:00:24:ff:49:99:e4',
+    'port': '21:00:00:24:ff:49:99:e4'},
+    '21:00:00:24:ff:49:99:e5': {'node': '20:00:00:24:ff:49:99:e5',
+    'port': '21:00:00:24:ff:49:99:e5'},
+    '21:00:00:24:ff:54:3a:5a': {'node': '20:00:00:24:ff:54:3a:5a',
+    'port': '21:00:00:24:ff:54:3a:5a'},
+    '21:00:00:24:ff:54:3a:5b': {'node': '20:00:00:24:ff:54:3a:5b',
+    'port': '21:00:00:24:ff:54:3a:5b'}}
+
+    """
+    response = self.run({"command": ["sh", "-c", "ls", "-l", "\'/sys/class/fc_host/\'"]})
+    if response["rc"] != 0 and re.search(r'No such file or directory', response["stderr"]):
+    self.logger.warn("No HBA card found on host.", self.getIpAddress())
+    return
+    elif response["rc"] != 0:
+    raise CommandException(response["stderr"])
+
+    lines = self.split(response["stdout"])
+    hbaAdapter = []
+
+    for line in lines:
+    if re.search(r'host[0-9]+', line):
+    self.logger.info('#####[Debug Log]%s' % line)
+    hbaAdapter.append(re.search(r'host[0-9]+', line).group())
+
+    hbaDict = {}
+    for adapter in hbaAdapter:
+    response = self.run({"command": ["sh", "-c", "cat", "port_name", "node_name"],
+    "directory": "/sys/class/fc_host/%s" % adapter})
+    lines = self.split(response["stdout"])
+    for line in lines:
+    if re.search(r'cat', line):
+    continue
+    port = None
+    if re.match(r'^0x', line):
+    port = self.normalizeWwn(line)
+    if port and re.match(r'^0x', lines[lines.index(line) + 1]):
+    hbaDict[port] = {"port": port,
+    "node": self.normalizeWwn(lines[lines.index(line) + 1])}
+    break
+    return hbaDict
+
+    def getProcessId(self, processName):
+    """获取指定进程名称的进程ID
+
+    Args:
+    processName (str): 进程名称.
+
+    Returns:
+    reArr (list): 指定进程名称的所有进程id.
+
+    Raises:
+    CommandException: 命令执行失败.
+
+    Examples:
+    pids = hostObj.getProcessId("sshd")
+    Output:
+    >['22912', '23430', '27333', '29117', '30581']
+
+    """
+    response = self.run({"command": ["sh", "-c", "ps", "-C", processName, "-o", "pid"]})
+    if response["rc"] != 0:
+    raise CommandException("Unable to find any processes with given process name: %s" % processName)
+
+    retArr = []
+    for line in self.split(response["stdout"]):
+    tmpMatch = re.match(r'\d+', self.trim(line))
+    if tmpMatch:
+    retArr.append(tmpMatch.group())
+    return retArr
+
+    def getTargets(self):
+    """获取主机中的ISCSI所有目标器
+
+    Args:
+    None
+
+    Returns:
+    targets (dict): 所有查询到的target信息, targets键值对说明:
+    key (str): 目标器名称.
+    value (list): 目标器所属的IP(target portal).
+
+    Raises:
+    CommandException: 命令执行失败.
+
+    Examples:
+    targets = hostObj.getTargets()
+    Output:
+    >{'iqn.2006-08.com.huawei:oceanstor:21000022a11055fa::1022006:129.94.10.11': ['129.94.10.11'],
+    'iqn.2006-08.com.huawei:oceanstor:21000022a11055fa::22006:129.94.10.10': ['129.94.10.10'],
+    'iqn.2006-08.com.huawei:oceanstor:2100313233343536::1020200:129.181.100.107': ['129.181.100.107'],
+    'iqn.2006-08.com.huawei:oceanstor:2100313233343536::20200:128.181.100.107': ['128.181.100.107'],
+    'iqn.2006-08.com.huawei:oceanstor:2100ac853ddbc42f::1020000:128.94.255.10': ['128.94.255.10'],
+    'iqn.2006-08.com.huawei:oceanstor:2100ac853ddbc42f::20000:129.94.255.10': ['129.94.255.10'],
+    'iqn.2006-08.com.huawei:oceanstor:2100ac853ddbc4a9::20000:128.94.255.12': ['128.94.255.12'],
+    'iqn.2006-08.com.huawei:oceanstor:2100ac853ddbc4a9::20000:129.94.255.12': ['129.94.255.12']}
+
+    """
+    self._checkOpenIscsi()
+
+    response = self.run({"command": ["sh", "-c", "iscsiadm", "-m", "node", "list"]})
+    targets = {}
+    if response["rc"] != 0:
+    self.logger.warn(response['stderr'])
+    return targets
+
+    lines = self.split(response["stdout"])
+    for line in lines:
+    tmpMatch = re.match("(\S+):\S+,\d+\s+(\S+)", line)
+    if tmpMatch:
+    ip = tmpMatch.group(1)
+    target = tmpMatch.group(2)
+    if target in targets:
+    targets[target].append(ip)
+    else:
+    targets[target] = [ip]
+
+    return targets
+
+    def upadminShowPath(self):
+    """获取upadmin show path的回显
+
+    Args:
+    None
+
+    Returns:
+    targets (list): 所有查询到的target信息,.
+
+    Raises:
+    CommandException: 命令执行失败.
+
+    Examples:
+    targets = hostObj.upadminShowPath()
+    Output:
+    Path ID Initiator Port Array Name Controller Target Port Path State Check State Port Type
+    0 21000024ff4b81f8 Huawei.Storage 0A 22089017acb03969 Normal -- FC
+    2 21000024ff4b81f9 Huawei.Storage 0B 24109017acb03969 Normal -- FC
+    Result:
+    [
+    {
+    'path_id' : '0',
+    'initiator_port': '21000024ff4b81f8',
+    'array_name': 'Huawei.Storage',
+    'controller': '0A',
+    'target_port': '22089017acb03969',
+    'path_state': 'Normal',
+    'check_state': '--',
+    'port_type':'FC'
+    },
+    {
+    'path_id' : '2',
+    'initiator_port': '21000024ff4b81f9',
+    'array_name': 'Huawei.Storage',
+    'controller': '0B',
+    'target_port': '24109017acb03969',
+    'path_state': 'Normal',
+    'check_state': '--',
+    'port_type':'FC'
+    }
+    ]
+
+    """
+    response = self.run({"command": ["sh", "-c", "upadmin", "show", "path"]})
+    targetList = []
+    if response["stdout"] is None:
+    return targetList
+
+    lines = self.split(response["stdout"])
+    compileSplit = re.compile('\s{2,}')
+    compileFind = re.compile('\d{1,}')
+    keys = []
+
+    for line in lines:
+    targetDict = {}
+    # 过滤分隔符
+    if line.endswith('----'):
+    continue
+    # 匹配表头，并且作为后续用的key值
+    if not re.findall(compileFind, line):
+    tempsKeys = re.split(compileSplit, line)
+    for key in tempsKeys:
+    key = key.strip()
+    keys.append(key.lower().replace(' ', '_'))
+    continue
+    line = line.strip()
+    values = re.split(compileSplit, line)
+    for (key, value) in zip(keys, values):
+    targetDict[key] = value
+
+    targetList.append(targetDict)
+
+    return targetList
+
+    def upadminSetPathState(self, pathstate, pathIDList=[], portId=None, number=None):
+    """在主机侧端口链路的断开和恢复
+
+    Args:
+    storageDevice (object): storageDevice对象
+    tpgstate (str): 开启或禁用控制器模块:enable、disable
+    portId (str): 端口ID
+    pathIDList (list): 需要回复的链路id
+
+    Returns:
+    None
+
+    Raises:
+    CommandException: 命令执行失败.
+
+    Examples:
+    pathIDList = host.upadminSetPathState(pathstate = "disable", controllerId = "0A")
+    host.upadminSetPathState(pathstate = "enable", pathIDList = pathIDList)
+
+
+    """
+    pathInfoList = self.upadminShowPath()
+    if portId is not None:
+    for pathInfo in pathInfoList:
+    if pathInfo["port_id"] == portId:
+    pathIDList.append(pathInfo["path_id"])
+    if number is not None:
+    if pathIDList == []:
+    for pathInfo in pathInfoList:
+    if pathInfo["path_state"] == "Normal":
+    pathIDList.append(pathInfo["path_id"])
+    if len(pathIDList) < number:
+    raise InvalidParamException("normal path number:%s is not enough" % len(pathIDList))
+    else:
+    pathIDList = random.sample(pathIDList, number)
+
+    if pathIDList == []:
+    raise CommandException("Unable to find any path id for to SetPathState.")
+    for pathId in pathIDList:
+    commands = ["sh", "-c", "upadmin", "set", "pathstate=" + pathstate, "path_id=" + str(pathId)]
+    response = self.run({"command": commands})
+    if re.search(r'Succeeded in executing the command', response["stdout"]):
+    self.logger.debug("tpgstate set succeeded.")
+    else:
+    self.logger.debug("tpgstate set succeeded.")
+    # raise CommandException("pathstate set failed,path id is:%s." % pathId)
+    return pathIDList
+
+    def upadminShowArrary(self):
+    """获取upadmin show array的回显
+
+    Args:
+    None
+
+    Returns:
+    targets (list): 所有查询到的阵列信息,.
+
+    Raises:
+    CommandException: 命令执行失败.
+
+    Examples:
+    targets = hostObj.upadminShowArrary()
+    Output:
+    Array ID Array Name Array SN Vendor Name Product Name
+    0 Huawei.Storage DAu71fb15rf060f00004 HUAWEI XSG1
+    Result:
+    [ {'array_id': '0', 'vendor_name': 'HUAWEI', 'array_name': 'Huawei.Storage', 'product_name': 'XSG1', 'array_sn': 'DAu71fb15rf060g00004'}
+    ]
+
+    """
+    response = self.run({"command": ["sh", "-c", "upadmin", "show", "array"]})
+    targetList = []
+    if response["stdout"] is None:
+    return targetList
+
+    lines = self.split(response["stdout"])
+    compileSplit = re.compile('\s{2,}')
+    compileFind = re.compile('\d{1,}')
+    keys = []
+
+    for line in lines:
+    targetDict = {}
+    # 过滤分隔符
+    if line.endswith('----'):
+    continue
+    # 匹配表头，并且作为后续用的key值
+    if not re.findall(compileFind, line):
+    tempsKeys = re.split(compileSplit, line)
+    for key in tempsKeys:
+    key = key.strip()
+    keys.append(key.lower().replace(' ', '_'))
+    continue
+    line = line.strip()
+    values = re.split(compileSplit, line)
+    for (key, value) in zip(keys, values):
+    targetDict[key] = value
+
+    targetList.append(targetDict)
+
+    return targetList
+
+    def upadminSetTPGState(self, storageDevice, tpgstate, controllerId):
+    """实现主机的控制器模块的故障和恢复
+
+    Args:
+    storageDevice (object): storageDevice对象
+    tpgstate (str): 开启或禁用控制器模块:enable、disable
+    controllerId (str): 控制器ID
+
+    Returns:
+    None
+
+    Raises:
+    CommandException: 命令执行失败.
+
+    Examples:
+    host.upadminSetTPGState(storageDevice = self.storageDevice, tpgstate = "disable", controllerId = "0A")
+    host.upadminSetTPGState(storageDevice = self.storageDevice, tpgstate = "enable", controllerId = "0A")
+
+
+    """
+    arrayInfoList = self.upadminShowArrary()
+    arrayID = None
+    for arrayInfo in arrayInfoList:
+    if arrayInfo["array_sn"] == storageDevice.SN:
+    arrayID = arrayInfo["array_id"]
+    if arrayID is None:
+    raise CommandException("Unable to find any array id for storage sn:%s." % storageDevice.SN)
+    commands = ["sh", "-c", "upadmin", "set", "tpgstate=" + tpgstate, "array_id=" + str(arrayID),
+    "tpg_id=" + controllerId]
+    response = self.run({"command": commands})
+    if re.search(r'Succeeded in executing the command', response["stdout"]):
+    self.logger.debug("tpgstate set succeeded.")
+    else:
+    raise CommandException("tpgstate set failed.")
 
 def startNlockTest(self, dir, fileBegin, fileEnd, lockBegin, lockEnd, type,
 toolPath='/opt/nlocktest/nlock_test', option=None):
