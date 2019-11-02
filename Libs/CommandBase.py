@@ -1,17 +1,14 @@
-
-CommandBase ::
-
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
 """
 功 能：提供所有通信的共有函数
 """
 
-from UniAutos.Exception.InvalidParamException import InvalidParamException
-from UniAutos import Log
+from Libs.Exception.CustomExceptions import InvalidParamException
+from Libs import Log
 import sys
 import re
-from UniAutos.Exception.UnImplementedException import UnImplementedException
+from Libs.Exception.CustomExceptions import UnImplementedException
 
 
 class CommandBase(object):

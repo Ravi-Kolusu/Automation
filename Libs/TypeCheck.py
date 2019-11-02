@@ -23,7 +23,6 @@ def validateParam(**types):
           def test(a, b):
               pass
     """
-
     def validateParamTypes(function):
         # Whether the number of parameters of the detection method is consistent with the expected nnumber of parameters,
         # self does not calculate
@@ -101,568 +100,374 @@ def validateDict(resource, template):
         if item not in resource and 'default' in template[item]:
             resource[item] = template[item]['default']
         # check if keywords that are not in the template are included
-        for item in resource:
-            # Throws an exception if no keyword is detexted
-            if item not in template:
+    for item in resource:
+        # Throws an exception if no keyword is detexted
+        if item not in template:
+            continue
+
+        # If the type of the expected value in the template is detected to be None
+        if template[item]['types'] == None:
+            if 'enum' in template[item]:
+                if resource[item] not in template[item]['enum']:
+                    raise DictKeyException('this value %s is not include in key %s'%(resource[item], item))
                 continue
 
-            # If the type of the expected value in the template is detected to be None
-            if template[item]['types'] == None:
-                if 'enum' in template[item]:
-                    if resource[item] not in template[item]['enum']:
-                        raise DictKeyException('this value %s is not include in key %s'%(resource[item], item))
-                    continue
-
-            if not isinstance(resource[item], template[item]['types']):
-                raise InvalidParamException('dict value %s in key: %s type is error. Expected type:%s, real type:%s'%(resource[item],
-                                                                                                                      item,
+        if not isinstance(resource[item], template[item]['types']):
+            raise InvalidParamException('dict value %s in key: %s type is error. Expected type:%s, real type:%s'%(resource[item],
+                                                                                                                  item,
                                                                                                                       template[item]['types'],
-                                                                                                                      type(resource[item])))
+                                                                                                              type(resource[item])))
     return resource
 
-#==========================================================================================================================================
-
-
-#========================================================================================================
-
-Typecheck ::
-
-#!/usr/bin/env python
-# -*- coding: utf8 -*
-
-"""
-功 能：TypeCheck，各种类型检测方法
-
-版权信息：华为技术有限公司，版本所有(C) 2014-2015
-
-"""
-
-import re
-from UniAutos.Util.Units import Units
-from UniAutos.Exception.DictKeyException import DictKeyException
-from UniAutos.Exception.InvalidParamException import InvalidParamException
-import copy
-
-
-def validateParam(**types):
-"""传入参数的类型检测，如果不是期望的参数类型则抛出异常。
-
-Args:
-tpyes(type): 传入的参数的类型
-
-Returns:
-validateParamTypes：返回包装后的函数
-
-Raises:
-InvalidParamException: 传入的参数数量与期望的参数数量不一致
-InvalidParamException: 传入的参数不是期望的类型
-
-Examples:
-#传入指定参数期望的参数类型：
-@validateParam(a=int, b=str)
-def test(a, b):
-pass
-
-Changes:
-2015-3-23 twx195475 修改注释
-2015-3-23 twx195475 修改方法名称
-"""
-
-def validateParamTypes(function):
-
-# 检测方法的参数个数是否和期望的参数数量一致，self不做计算
-argCount = function.func_code.co_argcount
-
-for varName in function.func_code.co_varnames:
-if varName == 'self':
-argCount -= 1
-
-# 检测传入的参数是否和预期的参数个数一致，否则将抛出异常
-if len(types) != argCount:
-raise InvalidParamException\
-('accept number of arguments not equal with function number of arguments in "%s".'% function.func_name)
-
-def newFunction(*args, **kwargs):
-# 判断参数的类型是否和预期一致否则将抛出异常
-for incr, var in enumerate(args):
-if function.func_code.co_varnames[incr] in types and not isinstance(var, types[function.func_code.co_varnames[incr]]):
-raise InvalidParamException("arguments '%s' type is error.it is '%s'." %(var, types[function.func_code.co_varnames[incr]]))
-
-for key, var in kwargs.iteritems():
-if key in types and not isinstance(var, types[key]):
-raise InvalidParamException("arguments '%s' type is error.it is '%s'." %(var, types[key]))
-
-return function(*args, **kwargs)
-
-newFunction.func_name = function.func_name
-
-return newFunction
-
-return validateParamTypes
-
-def validateDict(resource, template):
-"""对字典的检测，包含key的名称检测，key类型的检测，是否为必须传入的value的key
-
-Args:
-resource (dict): 检测的字典
-template (dict)：字典的模板，包含期望的字典的各个关键字，类型，是否为必选
-
-Raises:
-InvalidParamException: 传入参数不是字典类型
-DictKeyException: 字典模板定义错误
-DictKeyException: 传入的字典中没有包含必传的key
-DictKeyException: 传入了未知的key
-InvalidParamException: 传入的value值不是期望的类型
-
-Examples:
-传入期望检测的dict,以及dict的模板,其中模板需按下模式编写 {key: {"types": xxxxx, "optional": xxxxxx, "child": xxxxxx}}
-一个关键字后面跟一个字典包含三个关键字：
-types：该key的value期望的类型，如果该值为None,则不做类型检测
-optional: 该key是否为可选 True:可选，False:必选
-child: 如果该value是字典类型，则必须在这里传入这个字典期望的类型
-enum: 如果该value类型是None，则可以在后面添加该类型的期望值范围。需跟list类型，如“enum”: ["str", 1, 100.23]
-default: 设置默认值
-
-dicts = {"name": {"types": str, "optional": False},
-"age": {"types": int, "optional": True。"default":1},
-"male": {"types": None, "optional": True, "enum": ["male", "famale"]},
-"path": {"types": dict, "optional": True, "child": {"path_dir": {"types": str,"optional": False}}}}
-
-dit = {"name": "test", "age": 12, "male": "male", "path": {"path_dir": "xxxx"}}
-
-validateDict(dit, dicts)
-
-Changes:
-2015-3-25 twx195475 创建
-"""
-
-# 如果传入的参数不是字典类型则抛出异常
-if not isinstance(resource, dict) or not isinstance(template, dict):
-raise InvalidParamException("arguments '%s' or '%s' type is error.it must be dict type." % (resource, template))
-
-for item in template:
-
-# 检测模板是否命名符合规则
-if 'types' not in template[item] or 'optional' not in template[item]:
-raise DictKeyException("template dict is error. miss key in '%s'." % item)
-
-if isinstance(template[item]['types'], dict) and 'child' not in template[item]:
-raise DictKeyException("template dict is error. miss key in '%s'." % item)
-
-# 检测是否模板中是否有必选的关键字，而检测的字典中没有包含
-if item not in resource and not template[item]["optional"]:
-raise DictKeyException("miss required key '%s'." % item)
-
-# 添加默认值
-if item not in resource and "default" in template[item]:
-resource[item] = template[item]["default"]
-
-# 检测是否包含了模板中没有的关键字
-for item in resource:
-
-# 如果没有检测到关键字则抛出异常
-if item not in template:
-# raise DictKeyException("unknown key in '%s'." % item)
-continue
-
-# 如果检测到模板中期望的值的类型是None,则不做类型检测
-if template[item]["types"] == None:
-if "enum" in template[item]:
-if resource[item] not in template[item]["enum"]:
-raise DictKeyException("this value '%s' is not include in key '%s" % (resource[item], item))
-continue
-
-if not isinstance(resource[item], template[item]["types"]):
-raise InvalidParamException("dict value '%s' in key: '%s' type is error. Expected type:'%s', real type:'%s'." \
-% (resource[item], item, template[item]["types"], type(resource[item])))
-
-# 如果检测到字典中仍旧包含字典。则递归调用
-# if isinstance(resource[item], dict):
-# validateDict(resource[item], template[item])
-
-return resource
-
 def newValidateDict(resource, template):
-"""对字典的检测，包含key的名称检测，key类型的检测，是否为必须传入的value的key
+    """对字典的检测，包含key的名称检测，key类型的检测，是否为必须传入的value的key
 
-Args:
-resource (dict): 检测的字典
-template (dict)：字典的模板，包含期望的字典的各个关键字，类型，是否为必选
+    Args:
+    resource (dict): 检测的字典
+    template (dict)：字典的模板，包含期望的字典的各个关键字，类型，是否为必选
 
-Raises:
-InvalidParamException: 传入参数不是字典类型
-DictKeyException: 字典模板定义错误
-DictKeyException: 传入的字典中没有包含必传的key
-DictKeyException: 传入了未知的key
-InvalidParamException: 传入的value值不是期望的类型
+    Raises:
+    InvalidParamException: 传入参数不是字典类型
+    DictKeyException: 字典模板定义错误
+    DictKeyException: 传入的字典中没有包含必传的key
+    DictKeyException: 传入了未知的key
+    InvalidParamException: 传入的value值不是期望的类型
 
-Examples:
-传入期望检测的dict,以及dict的模板,其中模板需按下模式编写 {key: {"types": xxxxx, "optional": xxxxxx}}
+    Examples:
+    传入期望检测的dict,以及dict的模板,其中模板需按下模式编写 {key: {"types": xxxxx, "optional": xxxxxx}}
 
-types：该key的value期望的类型，如果该值为None,则不做类型检测(该关键字必须存在)
-optional: 该key是否为可选 True:可选，False:必选(该关键字必须存在)
-child: 如果该value是字典类型，则必须在这里传入这个字典期望的类型
-enum: 如果该value类型是None，则可以在后面添加该类型的期望值范围。需跟list类型，如“enum”: ["str", 1, 100.23]
-default: 设置默认值,传入的字典中没有包含该参数，则将模板中的该参数传入，并附上默认值
-depend: 参数依赖关系检测，后面跟参数关系列表。[a,b]表示a或者b [(a,b)]表示a和b
-mutex: 参数互斥关系检测，后面跟参数关系列表。[a,b]表示a或者b [(a,b)]表示a和b
-other: 简短的代码执行，后面跟str型。直接运行该字符串，变量名必须为input：如：" if input > 100: raise: Exception("Error")"
+    types：该key的value期望的类型，如果该值为None,则不做类型检测(该关键字必须存在)
+    optional: 该key是否为可选 True:可选，False:必选(该关键字必须存在)
+    child: 如果该value是字典类型，则必须在这里传入这个字典期望的类型
+    enum: 如果该value类型是None，则可以在后面添加该类型的期望值范围。需跟list类型，如“enum”: ["str", 1, 100.23]
+    default: 设置默认值,传入的字典中没有包含该参数，则将模板中的该参数传入，并附上默认值
+    depend: 参数依赖关系检测，后面跟参数关系列表。[a,b]表示a或者b [(a,b)]表示a和b
+    mutex: 参数互斥关系检测，后面跟参数关系列表。[a,b]表示a或者b [(a,b)]表示a和b
+    other: 简短的代码执行，后面跟str型。直接运行该字符串，变量名必须为input：如：" if input > 100: raise: Exception("Error")"
 
-dicts = {"name": {"types": str, "optional": False},
-"age": {"types": int, "optional": True。"default":1},
-"male": {"types": None, "optional": True, "enum": ["male", "famale"]},
-"path": {"types": dict, "optional": True, "child": {"path_dir": {"types": str,"optional": False}}}}
+    dicts = {"name": {"types": str, "optional": False},
+    "age": {"types": int, "optional": True。"default":1},
+    "male": {"types": None, "optional": True, "enum": ["male", "famale"]},
+    "path": {"types": dict, "optional": True, "child": {"path_dir": {"types": str,"optional": False}}}}
 
-dit = {"name": "test", "age": 12, "male": "male", "path": {"path_dir": "xxxx"}}
+    dit = {"name": "test", "age": 12, "male": "male", "path": {"path_dir": "xxxx"}}
 
-validateDict(dit, dicts)
+    validateDict(dit, dicts)
 
-Changes:
-2015-3-25 twx195475 创建
+    Changes:
+    2015-3-25 twx195475 创建
 
-Return :
-resource (dict): 返回处理好的参数字典
-"""
+    Return :
+    resource (dict): 返回处理好的参数字典
+    """
+    resourceKeyList = list(resource)
+    templateKeyList = list(template)
 
-resourceKeyList = list(resource)
-templateKeyList = list(template)
+    if not isinstance(resource, dict) or not isinstance(template, dict):
+        raise Exception("arguments resource or 'template type is error.it must be dict type." )
 
-if not isinstance(resource, dict) or not isinstance(template, dict):
-raise Exception("arguments resource or 'template type is error.it must be dict type." )
+    for key in template:
+        # 检测是否每个参数都至少包含了关键字 optional和types
+        if 'optional' not in template[key] or 'types' not in template[key]:
+            raise Exception("params 'optional' or 'types' must in params '%s'." % key)
 
-for key in template:
+        # 检测传入的参数中没有包含模板中的必选参数则抛出异常。
+        if template[key]['optional'] is False and key not in resourceKeyList:
+            raise Exception("miss required params '%s'." % key)
 
-# 检测是否每个参数都至少包含了关键字 optional和types
-if 'optional' not in template[key] or 'types' not in template[key]:
-raise Exception("params 'optional' or 'types' must in params '%s'." % key)
+        # 检测传入的参数中没有值但是模板中包含有默认值的参数，则在传入的参数中添加默认值。
+        if 'default' in template[key] and key not in resourceKeyList:
+            resource[key] = template[key]['default']
 
-# 检测传入的参数中没有包含模板中的必选参数则抛出异常。
-if template[key]['optional'] is False and key not in resourceKeyList:
-raise Exception("miss required params '%s'." % key)
+    # 重新刷新resourceKeyList列表
+    resourceKeyList = list(resource)
 
-# 检测传入的参数中没有值但是模板中包含有默认值的参数，则在传入的参数中添加默认值。
-if 'default' in template[key] and key not in resourceKeyList:
-resource[key] = template[key]['default']
+    for key in resourceKeyList:
+        # 如果传入了模板里面没有的参数，否则抛出异常。
+        if key not in templateKeyList:
+            raise Exception("not found this params '%s'!"% key)
 
-# 重新刷新resourceKeyList列表
-resourceKeyList = list(resource)
+        value = resource[key]
 
-for key in resourceKeyList:
+        # 关键字'types'处理
+        if 'types' in template[key] and template[key] is not None:
+            checkValueTypes(value, template[key]['types'])
 
-# 如果传入了模板里面没有的参数，否则抛出异常。
-if key not in templateKeyList:
-raise Exception("not found this params '%s'!"% key)
+        # 关键字'enum'处理。
+        if 'enum' in template[key]:
+            checkValueEnum(value, template[key]['enum'])
 
-value = resource[key]
+        # 关键字'depends'处理。
+        if 'depends' in template[key]:
+            checkValueDepend(key, template[key]['depends'], resourceKeyList)
 
-# 关键字'types'处理
-if 'types' in template[key] and template[key] is not None:
-checkValueTypes(value, template[key]['types'])
+        # 关键字'mutex'处理。
+        if 'mutex' in template[key]:
+            checkValueMutex(key, template[key]['mutex'], resourceKeyList)
 
-# 关键字'enum'处理。
-if 'enum' in template[key]:
-checkValueEnum(value, template[key]['enum'])
+        # 关键字'other'处理。
+        if 'other' in template[key]:
+            checkValueOther(value, template[key]['other'])
 
-# 关键字'depends'处理。
-if 'depends' in template[key]:
-checkValueDepend(key, template[key]['depends'], resourceKeyList)
+        # 关键字'child'处理。
+        if 'child' in template[key]:
+            if isinstance(value, dict) is False :
+                raise Exception('child is not dicts !')
 
-# 关键字'mutex'处理。
-if 'mutex' in template[key]:
-checkValueMutex(key, template[key]['mutex'], resourceKeyList)
+            NewDict = newValidateDict(value, template[key]['child'])
+            resource[key] = NewDict
 
-# 关键字'other'处理。
-if 'other' in template[key]:
-checkValueOther(value, template[key]['other'])
-
-# 关键字'child'处理。
-if 'child' in template[key]:
-if isinstance(value, dict) is False :
-raise Exception('child is not dicts !')
-
-NewDict = newValidateDict(value, template[key]['child'])
-resource[key] = NewDict
-
-return resource
+    return resource
 
 def checkValueEnum(value, enumList):
-"""对字典的中的关键字enum处理
+    """对字典的中的关键字enum处理
 
-Args:
-value (instance): 要检测的对象
-enumList (list)：可允许的列表
+    Args:
+    value (instance): 要检测的对象
+    enumList (list)：可允许的列表
 
-Raises:
-InvalidParamException: 传入参数没有在模板中找到
+    Raises:
+    InvalidParamException: 传入参数没有在模板中找到
 
-Examples:
-checkValueEnum（"test", ["test", 10, [], "xx"]）
+    Examples:
+    checkValueEnum（"test", ["test", 10, [], "xx"]）
 
-Changes:
-2015-3-25 twx195475 创建
-"""
-if value not in enumList:
-raise InvalidParamException("the value '%s' not in tempDict %s list!" %(value, enumList))
+    Changes:
+    2015-3-25 twx195475 创建
+    """
+    if value not in enumList:
+        raise InvalidParamException("the value '%s' not in tempDict %s list!" %(value, enumList))
 
 def checkValueTypes(value, types):
-"""对字典的中的关键字Types处理
+    """对字典的中的关键字Types处理
 
-Args:
-value (instance): 要检测的对象
-types (type, str)：期望的类型,
-类型一系统默认：str, int, list, dict, None, tuple, float
-类型二自定义： 'Time', 'Size', 'Number', 'instance', 'function', 'classobj'
+    Args:
+    value (instance): 要检测的对象
+    types (type, str)：期望的类型,
+    类型一系统默认：str, int, list, dict, None, tuple, float
+    类型二自定义： 'Time', 'Size', 'Number', 'instance', 'function', 'classobj'
 
-Raises:
-InvalidParamException: 传入的值不是期望的类型
+    Raises:
+    InvalidParamException: 传入的值不是期望的类型
 
-Examples:
-checkValueTypes("test", str)
+    Examples:
+    checkValueTypes("test", str)
 
-Changes:
-2015-3-25 twx195475 创建
-"""
+    Changes:
+    2015-3-25 twx195475 创建
+    """
+    if types == None:
+        return
 
-if types == None:
-return
+    if isinstance(types, str):
+        listTypeForSys = ['instance', 'function', 'classobj']
+        listTypeForUnits = ['Time', 'Size', 'number']
 
-if isinstance(types, str):
-
-listTypeForSys = ['instance', 'function', 'classobj']
-listTypeForUnits = ['Time', 'Size', 'number']
-
-if types not in listTypeForSys and types not in listTypeForUnits:
-raise InvalidParamException("unkown types %s" %types)
-
-elif types in listTypeForSys:
-valueType = re.search('' ,str(type(value))).groups()[0]
-if valueType == types:
-return
-
-elif types in listTypeForUnits:
-
-if types is 'Time' and Units.isTime(value) is False:
-raise InvalidParamException("the value %s is not Time types!" %value)
-elif types is 'Size' and Units.isSize(value) is False:
-raise InvalidParamException("the value %s is not Size types!" %value)
-elif types is 'Number' and Units.isNumber(value) is False:
-raise InvalidParamException("the value %s is not Number types!" %value)
-
-else:
-if isinstance(value, types) is True:
-return
-
-raise InvalidParamException("the value '%s' is not %s!" %(value, types))
-
+        if types not in listTypeForSys and types not in listTypeForUnits:
+            raise InvalidParamException("unkown types %s" %types)
+        elif types in listTypeForSys:
+            valueType = re.search('' ,str(type(value))).groups()[0]
+            if valueType == types:
+                return
+        elif types in listTypeForUnits:
+            if types is 'Time' and Units.isTime(value) is False:
+                raise InvalidParamException("the value %s is not Time types!" %value)
+            elif types is 'Size' and Units.isSize(value) is False:
+                raise InvalidParamException("the value %s is not Size types!" %value)
+            elif types is 'Number' and Units.isNumber(value) is False:
+                raise InvalidParamException("the value %s is not Number types!" %value)
+    else:
+        if isinstance(value, types) is True:
+            return
+    raise InvalidParamException("the value '%s' is not %s!" %(value, types))
 
 # 需要修改之前的代码，暂时不做考虑这种实现方式
 def checkValueTypes_other(value, types):
-listType = ['Null', 'instance', 'function', 'int', 'str', 'list', 'tuple', 'dict', 'float', 'None', 'classobj', 'type']
-
-for t in types:
-
-if t == 'Null':
-return
-
-if t in listType:
-valueTypes = type(value)
-valueType = re.search('' ,valueTypes).groups()[0]
-
-if valueType != t:
-raise Exception("the value %s in Error types!" %value)
-else:
-
-if isinstance(value ,t) == False:
-raise Exception("the value %s in Error types!" %value)
+    listType = ['Null', 'instance', 'function', 'int', 'str', 'list', 'tuple', 'dict', 'float', 'None',
+                'classobj', 'type']
+    for t in types:
+        if t == 'Null':
+            return
+        if t in listType:
+            valueTypes = type(value)
+            valueType = re.search('' ,valueTypes).groups()[0]
+            if valueType != t:
+                raise Exception("the value %s in Error types!" %value)
+        else:
+            if isinstance(value ,t) == False:
+                raise Exception("the value %s in Error types!" %value)
 
 # 依赖关系
 def checkValueDepend(value, templateList, resourceKeyList):
+    """对字典的中的关键字Depend处理,参数的依赖关系。 依赖关系列表如：templateList = [a, b, (c, d)]，
+    该参数需要依赖于a参数 或者 依赖于b参数 或者 依赖于c和d，（c, d参数都必须存在）。
 
-"""对字典的中的关键字Depend处理,参数的依赖关系。 依赖关系列表如：templateList = [a, b, (c, d)]，
-该参数需要依赖于a参数 或者 依赖于b参数 或者 依赖于c和d，（c, d参数都必须存在）。
+    Args:
+    value (instance): 要检测的对象
+    templateList (list)：模板中参数依赖列表
+    resourceKeyList (list)：传入的参数列表
 
-Args:
-value (instance): 要检测的对象
-templateList (list)：模板中参数依赖列表
-resourceKeyList (list)：传入的参数列表
+    Raises:
+    InvalidParamException: 没有找到该参数所依赖的其他参数
 
-Raises:
-InvalidParamException: 没有找到该参数所依赖的其他参数
+    Examples:
+    checkValueDepend("name", ["age","path"], resource)
+    checkValueDepend("age", ["path"], resource)
 
-Examples:
-checkValueDepend("name", ["age","path"], resource)
-checkValueDepend("age", ["path"], resource)
-
-Changes:
-2015-3-25 twx195475 创建
-"""
-if isinstance(templateList, list) is False or isinstance(resourceKeyList, list) is False:
-raise InvalidParamException("the params must be list type~!")
-
-for key in templateList:
-if isinstance(key, tuple) is False:
-if key in resourceKeyList:
-return
-else:
-for item in key:
-if item not in resourceKeyList:
-raise InvalidParamException("the params '%s' must depend on other params %s, but not found them." %(value , templateList))
-return
-
-raise InvalidParamException("the params '%s' must depend on other params %s, but not found them." %(value, templateList))
+    Changes:
+    2015-3-25 twx195475 创建
+    """
+    if isinstance(templateList, list) is False or isinstance(resourceKeyList, list) is False:
+        raise InvalidParamException("the params must be list type~!")
+    for key in templateList:
+        if isinstance(key, tuple) is False:
+            if key in resourceKeyList:
+                return
+        else:
+            for item in key:
+                if item not in resourceKeyList:
+                    raise InvalidParamException("the params '%s' must depend on other params %s, but not found them." %(value , templateList))
+            return
+    raise InvalidParamException("the params '%s' must depend on other params %s, but not found them." %(value, templateList))
 
 # 互斥关系
 def checkValueMutex(value, templateList, resourceKeyList):
+    """对字典的中的关键字Mutex处理,参数的互斥关系。 依赖关系列表如：templateList = [a, b, (c, d)]，
+    该参数与 a参数 或者 依赖于b参数 或者 于c和d，（c,d参数都必须存在）参数不能一起存在。
 
-"""对字典的中的关键字Mutex处理,参数的互斥关系。 依赖关系列表如：templateList = [a, b, (c, d)]，
-该参数与 a参数 或者 依赖于b参数 或者 于c和d，（c,d参数都必须存在）参数不能一起存在。
+    Args:
+    value (instance): 要检测的对象
+    templateList (list)：模板中参数依赖列表
+    resourceKeyList (list)：传入的参数列表
 
-Args:
-value (instance): 要检测的对象
-templateList (list)：模板中参数依赖列表
-resourceKeyList (list)：传入的参数列表
+    Raises:
+    InvalidParamException: 找到了与该参数互斥的参数，他们不能一起存在
 
-Raises:
-InvalidParamException: 找到了与该参数互斥的参数，他们不能一起存在
+    Examples:
+    checkValueMutex("name", ["age","path"], resource)
+    checkValueMutex("age", ["path"], resource)
 
-Examples:
-checkValueMutex("name", ["age","path"], resource)
-checkValueMutex("age", ["path"], resource)
+    Changes:
+    2015-3-25 twx195475 创建
+    """
+    if isinstance(templateList, list) is False or isinstance(resourceKeyList, list) is False:
+        raise InvalidParamException("the params must be list type~!")
 
-Changes:
-2015-3-25 twx195475 创建
-"""
-if isinstance(templateList, list) is False or isinstance(resourceKeyList, list) is False:
-raise InvalidParamException("the params must be list type~!")
-
-for key in templateList:
-if isinstance(key, tuple) is False:
-if key in resourceKeyList:
-raise InvalidParamException("the params '%s' can not with some another params %s" %(value, templateList))
-else:
-isfound = 0
-for item in key:
-if item in resourceKeyList:
-isfound += 1
-if isfound == len(key):
-raise InvalidParamException("the params '%s' can not with some another params %s" %(value, templateList))
-return
+    for key in templateList:
+        if isinstance(key, tuple) is False:
+            if key in resourceKeyList:
+                raise InvalidParamException("the params '%s' can not with some another params %s" %(value, templateList))
+        else:
+            isfound = 0
+            for item in key:
+                if item in resourceKeyList:
+                    isfound += 1
+            if isfound == len(key):
+                raise InvalidParamException("the params '%s' can not with some another params %s" %(value, templateList))
+    return
 
 # 执行语句
 def checkValueOther(value, templateMethod):
+    """对字典的中的关键字other处理,templateMethod 必须为str,并且替换的关键字为 input
+    例如："if input > 10: raise Exception('Error Numbers!!')"
 
-"""对字典的中的关键字other处理,templateMethod 必须为str,并且替换的关键字为 input
-例如："if input > 10: raise Exception('Error Numbers!!')"
+    Args:
+    value (instance): 要处理的对象
+    templateMethod (str)：模板中参数依赖列表
+    Raises:
+    None
 
-Args:
-value (instance): 要处理的对象
-templateMethod (str)：模板中参数依赖列表
-Raises:
-None
+    Examples:
+    checkValueOther(11, "if input > 10: raise Exception('Error Numbers!!')")
+    Changes:
+    2015-3-25 twx195475 创建
+    """
+    if isinstance(templateMethod, str) is False:
+        return
 
-Examples:
-checkValueOther(11, "if input > 10: raise Exception('Error Numbers!!')")
-Changes:
-2015-3-25 twx195475 创建
-"""
-
-if isinstance(templateMethod, str) is False:
-return
-
-strs = re.sub('input', str(value), templateMethod )
-exec(strs)
-
+    strs = re.sub('input', str(value), templateMethod )
+    exec(strs)
 
 def mySub(line, characters):
-'''剔除字符串开头部分的乱码'''
+    '''剔除字符串开头部分的乱码'''
 
-# 避免剔除分隔符
-if re.search('\w+', line):
-for searcher in characters:
-line = re.sub(searcher, '', line)
-return line
-
+    # 避免剔除分隔符
+    if re.search('\w+', line):
+        for searcher in characters:
+            line = re.sub(searcher, '', line)
+    return line
 
 def removeSpecialCharacters(*cmds):
-'''剔除指定命令回显当中出现的指定特殊字符
+    '''剔除指定命令回显当中出现的指定特殊字符
 
-Args:
-cmds type(tuple): 需要处理的命令,以及需要处理的特殊字符的正则匹配表达式
+    Args:
+    cmds type(tuple): 需要处理的命令,以及需要处理的特殊字符的正则匹配表达式
 
-Example:
-@removeSpecialCharacters(
-('show_alarm', ('\b', '^[-/\\\\|]+', '^Processing\.{3}\s{2}'))
-)
-def func():
+    Example:
+    @removeSpecialCharacters(
+    ('show_alarm', ('\b', '^[-/\\\\|]+', '^Processing\.{3}\s{2}'))
+    )
+    def func():
 
-'''
+    '''
+    def decoratorRemoveCharacters(function):
+        def removeCharacters(*args, **kwargs):
+            if 'rawOutput' in kwargs:
+                output = kwargs['rawOutput']
+            else:
+                output = args[-1]
 
-def decoratorRemoveCharacters(function):
-def removeCharacters(*args, **kwargs):
-# 获取回显
-if 'rawOutput' in kwargs:
-output = kwargs['rawOutput']
-else:
-output = args[-1]
+            # 回显类型不对时不做处理
+            if not output or not isinstance(output, list):
+                return function(*args, **kwargs)
 
-# 回显类型不对时不做处理
-if not output or not isinstance(output, list):
-return function(*args, **kwargs)
+            cmd = [cmd for cmd in cmds if re.sub('_', ' ', cmd[0]) in output[0]]
+            # 不属于指定处理命令集不作处理
+            if not cmd:
+                return function(*args, **kwargs)
 
-cmd = [cmd for cmd in cmds if re.sub('_', ' ', cmd[0]) in output[0]]
-# 不属于指定处理命令集不作处理
-if not cmd:
-return function(*args, **kwargs)
-
-# 剔除处理前的回显列表
-if 'rawOutput' in kwargs:
-del kwargs['rawOutput']
-else:
-args = args[:-1]
-# 对回显进行剔除特殊字符处理
-characters = [cmd[0][1] for i in xrange(len(output))]
-rawOutput = map(mySub, output, characters)
-
-return function(*args, rawOutput=rawOutput, **kwargs)
-
-return removeCharacters
-
-return decoratorRemoveCharacters
+            # 剔除处理前的回显列表
+            if 'rawOutput' in kwargs:
+                del kwargs['rawOutput']
+            else:
+                args = args[:-1]
+            # 对回显进行剔除特殊字符处理
+            characters = [cmd[0][1] for i in xrange(len(output))]
+            rawOutput = map(mySub, output, characters)
+            return function(*args, rawOutput=rawOutput, **kwargs)
+        return removeCharacters
+    return decoratorRemoveCharacters
 
 def getEventAlarmDetailDecorator(*fields):
-'''适配修改报警命令中的指定字段
-Args :
-fields type(dict) : 需要处理的命令,以及需要处理的特殊字符的正则匹配表达式
+    '''适配修改报警命令中的指定字段
+    Args :
+    fields type(dict) : 需要处理的命令,以及需要处理的特殊字符的正则匹配表达式
 
-Example:
-@getEventAlarmDetailDecorator(
-('en_particular',('(\[.+?\])+','%s'))
-)
-def fun
-'''
-
-def decoratorGetEventAlarmDetail(func):
-def getDetail(*arges, **kwargs):
-reslut = func(*arges, **kwargs)
-if not reslut:
-return reslut
-value = []
-# 属于指定命令集则做以下处理
-for field in fields:
-if isinstance(field, tuple):
-for i in range(0, len(field[1]), 2):
-if isinstance(reslut[field[0]], list):
-value = [re.sub(field[1][i], field[1][i + 1], data) for data in reslut[field[0]]]
-if field[0] == 'en_particular':
-# 剔除对比阵列上多余的信息
-value = [re.sub('(\{.+?\})+', '', val) for val in value]
-# 去除空行
-value = [line for line in value if line]
-# 将处理好后的命令集添加到reslut
-reslut["detail"] = "\n".join(value)
-return reslut
-
-return getDetail
-
-return decoratorGetEventAlarmDetail
-
+    Example:
+    @getEventAlarmDetailDecorator(
+    ('en_particular',('(\[.+?\])+','%s'))
+    )
+    def fun
+    '''
+    def decoratorGetEventAlarmDetail(func):
+        def getDetail(*arges, **kwargs):
+            reslut = func(*arges, **kwargs)
+            if not reslut:
+                return reslut
+            value = []
+            # 属于指定命令集则做以下处理
+            for field in fields:
+                if isinstance(field, tuple):
+                    for i in range(0, len(field[1]), 2):
+                        if isinstance(reslut[field[0]], list):
+                            value = [re.sub(field[1][i], field[1][i + 1], data) for data in reslut[field[0]]]
+                            if field[0] == 'en_particular':
+                                # 剔除对比阵列上多余的信息
+                                value = [re.sub('(\{.+?\})+', '', val) for val in value]
+            # 去除空行
+            value = [line for line in value if line]
+            # 将处理好后的命令集添加到reslut
+            reslut["detail"] = "\n".join(value)
+            return reslut
+        return getDetail
+    return decoratorGetEventAlarmDetail
