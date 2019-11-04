@@ -4,7 +4,7 @@ import cgi
 import logging
 import re
 import traceback
-#import LogFormat
+import LogFormat
 import sys, pprint, cStringIO
 from enum import Enum
 
