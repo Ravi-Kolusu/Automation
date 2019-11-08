@@ -1,6 +1,3 @@
-
-============================================================================================
-
 #!/bin/bash
 readonly dfv_user=dfvmanager
 readonly dfv_group=dfvgroup
